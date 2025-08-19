@@ -190,8 +190,26 @@
     
     .hr { height: 1px; background: var(--line); margin: 24px 0; }
     .mini { font-size: 12px; color: var(--muted); }
-    .logo-preview { width: 140px; height: 80px;
-      object-fit: contain; border: 2px dashed var(--line); border-radius: 12px; background: var(--bg); padding: 5px; }
+    .logo-preview {
+  width: 140px;
+  height: 80px;
+  max-width: 100%;
+  max-height: 80px;
+  object-fit: contain;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  padding: 5px;
+  display: block;
+}
+@media (max-width: 900px) {
+  .logo-preview {
+    width: 100px;
+    height: 60px;
+    max-width: 100%;
+    max-height: 60px;
+  }
+}
     .thumbs { display: grid;
       grid-template-columns: repeat(auto-fill, minmax(100px,1fr)); gap: 10px; margin-top: 10px; }
     .thumb { border: 1px solid var(--line); border-radius: 12px;
@@ -536,7 +554,7 @@
                     <label>Logo (opcional)</label>
                     <div style="display:flex;
  align-items:flex-end; gap:16px;">
-                        <img id="logoPreview" class="logo-preview" alt="logo preview" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAABQCAYAAABQn6nVAAAAF0lEQVR4nO3BMQEAAAgDoJvc6FEOhAAAAAAAgJ8AAXwAAQ==" />
+                        <img id="logoPreview" class="logo-preview" alt="logo preview" src="img/logo.png" />
                         <input type="file" id="em_logo" accept="image/*" />
                     </div>
                 </div>
@@ -616,6 +634,61 @@
   <div id="qrcode-container" style="display: none;"></div>
 
   <script>
+ // ========================
+// Convertir números a letras (Colombia - COP) en MAYÚSCULAS
+// ========================
+function numeroALetras(num) {
+  const unidades = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
+  const decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+  const centenas = ["", "cien", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+
+  function convertirMenor1000(n) {
+    if (n === 0) return "";
+    if (n < 10) return unidades[n];
+    if (n < 100) {
+      if (n < 20) {
+        const especiales = {
+          10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce",
+          15: "quince", 16: "dieciséis", 17: "diecisiete", 18: "dieciocho", 19: "diecinueve"
+        };
+        return especiales[n];
+      }
+      if (n % 10 === 0) return decenas[Math.floor(n / 10)];
+      return decenas[Math.floor(n / 10)] + " y " + unidades[n % 10];
+    }
+    if (n < 1000) {
+      if (n === 100) return "cien";
+      if (n % 100 === 0) return centenas[Math.floor(n / 100)];
+      return centenas[Math.floor(n / 100)] + " " + convertirMenor1000(n % 100);
+    }
+    return "";
+  }
+
+  if (num === 0) return "CERO PESOS M/CTE";
+
+  let millones = Math.floor(num / 1000000);
+  let miles = Math.floor((num % 1000000) / 1000);
+  let resto = num % 1000;
+
+  let texto = "";
+
+  if (millones > 0) {
+    if (millones === 1) texto += "un millón ";
+    else texto += convertirMenor1000(millones) + " millones ";
+  }
+
+  if (miles > 0) {
+    if (miles === 1) texto += "mil ";
+    else texto += convertirMenor1000(miles) + " mil ";
+  }
+
+  if (resto > 0) {
+    texto += convertirMenor1000(resto);
+  }
+
+  return (texto.trim() + " pesos m/cte").toUpperCase();
+}
+
     const MAX_CELL_LENGTH = 32767;
 
     function safeText(text) {
@@ -703,7 +776,11 @@
       $('#em_dir').value = DB.Emisor.direccion || '';
       $('#em_tel').value = DB.Emisor.telefono || '';
       $('#em_mail').value = DB.Emisor.correo || '';
-      if(DB.Emisor.logo){ $('#logoPreview').src = DB.Emisor.logo; }
+      if(DB.Emisor.logo){
+        $('#logoPreview').src = DB.Emisor.logo;
+      } else {
+        $('#logoPreview').src = 'img/logo.png'; // tu logo por defecto
+      }
     }
 
     function refreshClientesSelect(){
@@ -1187,11 +1264,9 @@
       };
 
       if (DB.Emisor.logo) {
-          try {
-              const imgData = new Image();
-              imgData.src = DB.Emisor.logo;
-              doc.addImage(imgData, 'PNG', page.m, page.m, 100, 55, undefined, 'FAST');
-          } catch(e) { console.error("Error al cargar el logo", e); }
+    try {
+        doc.addImage(DB.Emisor.logo, 'PNG', page.m, page.m, 100, 55, undefined, 'FAST');
+    } catch(e) { console.error("Error al cargar el logo", e); }
       }
       
       doc.setFont('helvetica', 'bold');
@@ -1317,6 +1392,12 @@
       doc.setFontSize(14);
       doc.text('TOTAL:', totalsX, finalY);
       doc.text(currency(tot), page.w - page.m, finalY, { align: 'right' });
+      // Mostrar total en letras debajo del valor numérico
+finalY += 20;
+doc.setFont('helvetica', 'normal');
+doc.setFontSize(10);
+doc.setTextColor(mutedColor);
+doc.text("Son: " + numeroALetras(Math.round(tot)), totalsX, finalY, { align: 'left' });
 
       if(evidencias.length){
         doc.addPage();
