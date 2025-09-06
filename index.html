@@ -813,22 +813,29 @@
             <hr class="hr" />
 
             <div class="grid cols-3" style="gap: 16px;">
-                <div style="grid-column: 1 / 3;">
-     
-                   <div class="row">
+                <div style="grid-column: 1 / 2;">
+                    <div class="row">
                         <div>
                             <label>Número de Factura</label>
                             <input id="fc_num" placeholder="Autogenerado si está vacío" />
                         </div>
                         <div>
                             <label>Fecha</label>
-                    
-                        <input id="fc_fecha" type="date" />
+                            <input id="fc_fecha" type="date" />
                         </div>
                     </div>
                 </div>
                 <div>
-             
+                    <label>Descuento</label>
+                    <div style="display:grid; grid-template-columns: 1fr 100px; gap:8px;">
+                        <select id="fc_desc_tipo">
+                            <option value="porcentaje">Porcentaje (%)</option>
+                            <option value="fijo">Valor Fijo ($)</option>
+                        </select>
+                        <input id="fc_desc_valor" type="number" min="0" step="0.01" value="0" />
+                    </div>
+                </div>
+                <div>
                    <label>IVA (%)</label>
                     <input id="fc_iva" type="number" min="0" step="0.01" value="0" />
                 </div>
@@ -866,16 +873,15 @@
                     <div id="previewCliente" class="mini card" style="padding:16px; min-height:100px;"></div>
                     <div class="total-box" style="margin-top:10px;">
                         <div style="display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center">
-             
-                               <span>Subtotal</span>
+                            <span>Subtotal</span>
                             <span class="right" id="subtotal">$0</span>
+                            <span>Descuento</span>
+                            <span class="right" id="descuento" style="color: var(--success);">- $0</span>
                             <span>IVA</span>
-                           
                             <span class="right" id="iva">$0</span>
                             <span style="font-weight:700">Total</span>
                             <span class="right" id="total" style="font-weight:800; font-size: 1.2em">$0</span>
                         </div>
-           
                      </div>
                 </div>
             </div>
@@ -1085,13 +1091,13 @@
   
   <div id="toast" class="toast"></div>
 
-  <footer>Creado por Kevin Hurtado - Uso personal Beta 2.0</footer>
+  <footer>Creado por Kevin Posso Hurtado - Uso personal Beta 2.0</footer>
 
   <div id="qrcode-container" style="display: none;"></div>
 
   <script>
     // ========================
-    // Convertir números a letras (Colombia - COP) en MAYÚSCULAS
+    // Convertir números a letras (Colombia - COP) en MAYÚSCulas
     // ========================
     function numeroALetras(num) {
       const unidades = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
@@ -1163,7 +1169,7 @@
       Emisor: { nombre: '', nit: '', direccion: '', telefono: '', correo: '', logo: '' },
       Clientes: [],
       Productos: [],
-      Facturas: [] // {numero,fecha,clienteNit,items:[...], iva, notas, evidenciasCount}
+      Facturas: [] // {numero,fecha,clienteNit,items:[...], iva, notas, evidenciasCount, descuentoTipo, descuentoValor}
     };
     let DB = loadDB();
 
@@ -1211,9 +1217,9 @@
 
     function checkPassword(password) {
       const storedHash = localStorage.getItem(PASS_KEY);
-      
+      // Si no hay contraseña establecida, usar la predeterminada "1234"
       if (!storedHash) {
-        const defaultHash = hashPassword("****");
+        const defaultHash = hashPassword("1234");
         localStorage.setItem(PASS_KEY, defaultHash);
         return hashPassword(password) === defaultHash;
       }
@@ -1270,7 +1276,7 @@
       if(DB.Emisor.logo){
         $('#logoPreview').src = DB.Emisor.logo;
       } else {
-        $('#logoPreview').src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTQwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iODAiIGZpbGw9IiNGM0Y0RjYiIHJ4PSI4Ii8+PHN2ZyB4PSI1MCIgeT0iMjUiIHdpZHRoPSI0MCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Q0EwQUIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTUgM0g2YTIgMiAwIDAgMC0yIDJ2MTRhMiAyIDAgMCAwIDIgMmgxMmEyIDIgMCAwIDAgMi0yVjlabTAgNGg0YTIgMiAwIDAgMSAyIDJ2MGEyIDIgMCAwIDEtMiAyaC00YTIgMiAwIDAgMS0yLTJ2MGEyIDIgMCAwIDEgMi0yeiIvPjwvc3ZnPjx0ZXh0IHg9IjcwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBMEFCIj5Mb2dvIGRlIGxhIGVtcHJlc2E8L3RleHQ+PC9zdmc+';
+        $('#logoPreview').src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTQwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iODAiIGZpbGw9IiNGM0Y0RjYiIHJ4PSI4Ii8+PHN2ZyB4PSI1MCIgeT0iMjUiIHdpZHRoPSI0MCIgaGVpZHRoPSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Q0EwQUIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTUgM0g2YTIgMiAwIDAgMC0yIDJ2MTRhMiAyIDAgMCAwIDIgMmgxMmEyIDIgMCAwIDAgMi0yVjlabTAgNGg0YTIgMiAwIDAgMSAyIDJ2MGEyIDIgMCAwIDEtMiAyaC00YTIgMiAwIDAgMS0yLTJ2MGEyIDIgMCAwIDEgMi0yeiIvPjwvc3ZnPjx0ZXh0IHg9IjcwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBMEFCIj5Mb2dvIGRlIGxhIGVtcHJlc2E8L3RleHQ+PC9zdmc+';
       }
     }
 
@@ -1331,8 +1337,18 @@
         const tbody = $('#tablaFacturas tbody');
         tbody.innerHTML = [...DB.Facturas].reverse().map((f, i) => {
             const cliente = DB.Clientes.find(c => c.nit === f.clienteNit);
-            const sub = (f.items || []).reduce((a,b)=> a + b.valor*b.cantidad, 0);
-            const total = sub * (1 + (f.iva/100));
+
+            const sub = (f.items || []).reduce((a,b)=> a + b.valor * b.cantidad, 0);
+            let descVal = 0;
+            if (f.descuentoTipo === 'porcentaje') {
+                descVal = sub * ((f.descuentoValor || 0) / 100);
+            } else {
+                descVal = f.descuentoValor || 0;
+            }
+            const subConDescuento = sub - descVal;
+            const ivaVal = subConDescuento * ((f.iva || 0) / 100);
+            const total = subConDescuento + ivaVal;
+
             const originalIndex = DB.Facturas.length - 1 - i;
             return `
     
@@ -1462,10 +1478,10 @@
     // ========================
     // Constructor de factura
     // ========================
-    let FACT = { numero: '', fecha: today(), iva: 0, notas: '', items: [], evidencias: [] };
+    let FACT = { numero: '', fecha: today(), iva: 0, notas: '', items: [], evidencias: [], descuentoTipo: 'porcentaje', descuentoValor: 0 };
     
     function resetFacturaForm() {
-        FACT = { numero: '', fecha: today(), iva: 0, notas: '', items: [], evidencias: [] };
+        FACT = { numero: '', fecha: today(), iva: 0, notas: '', items: [], evidencias: [], descuentoTipo: 'porcentaje', descuentoValor: 0 };
         $('#fc_num').value = '';
         $('#fc_fecha').value = today();
         $('#fc_iva').value = 0;
@@ -1473,6 +1489,8 @@
         $('#selCliente').value = '';
         $('#fc_imgs').value = '';
         $('#thumbs').innerHTML = '';
+        $('#fc_desc_tipo').value = 'porcentaje';
+        $('#fc_desc_valor').value = 0;
         updatePreviewCliente();
         paintItems();
         showToast('Formulario limpiado 🧹', 'success');
@@ -1520,15 +1538,29 @@
       FACT.notas = $('#fc_notas').value.trim();
       FACT.fecha = $('#fc_fecha').value || today();
       FACT.numero = $('#fc_num').value.trim() || '';
+      FACT.descuentoTipo = $('#fc_desc_tipo').value;
+      FACT.descuentoValor = Number($('#fc_desc_valor').value || 0);
+
       const sub = FACT.items.reduce((a,b)=> a + b.valor*b.cantidad, 0);
-      const ivaVal = sub * (FACT.iva/100);
-      const tot = sub + ivaVal;
+      
+      let descVal = 0;
+      if (FACT.descuentoTipo === 'porcentaje') {
+          descVal = sub * (FACT.descuentoValor / 100);
+      } else {
+          descVal = FACT.descuentoValor;
+      }
+
+      const subConDescuento = sub - descVal;
+      const ivaVal = subConDescuento * (FACT.iva/100);
+      const tot = subConDescuento + ivaVal;
+
       $('#subtotal').textContent = currency(sub);
+      $('#descuento').textContent = `- ${currency(descVal)}`;
       $('#iva').textContent = currency(ivaVal);
       $('#total').textContent = currency(tot);
     }
 
-    ['#fc_iva','#fc_notas','#fc_fecha','#fc_num'].forEach(id => $(id).addEventListener('input', recalcTotals));
+    ['#fc_iva','#fc_notas','#fc_fecha','#fc_num', '#fc_desc_tipo', '#fc_desc_valor'].forEach(id => $(id).addEventListener('input', recalcTotals));
     
     $('#fc_imgs').addEventListener('change', async (e) => {
       FACT.evidencias = [];
@@ -1567,7 +1599,7 @@
       const shEm = XLSX.utils.json_to_sheet([{ nombre: "Mi Empresa SAS", nit: "900123456-7", direccion: "Calle 1 #2-34", telefono: "+57 3xx xxx xxxx", correo: "facturacion@miempresa.com" }]);
       const shCl = XLSX.utils.json_to_sheet([{ nombre: "Cliente Ejemplo", nit: "123456789", direccion: "Cra 1 #23-45", telefono: "+57 3xx xxx xxxx", correo: "cliente@correo.com" }]);
       const shPr = XLSX.utils.json_to_sheet([{ codigo: "SRV-001", nombre: "Servicio de Consultoría", valor: 120000, bullets: "Análisis inicial;Informe final" }]);
-      const shFa = XLSX.utils.json_to_sheet([{ numero: "000001", fecha: "2025-01-01", clienteNit: "123456789", iva: 19, notas: "Notas de ejemplo."}]);
+      const shFa = XLSX.utils.json_to_sheet([{ numero: "000001", fecha: "2025-01-01", clienteNit: "123456789", iva: 19, notas: "Notas de ejemplo.", descuentoTipo: 'porcentaje', descuentoValor: 10 }]);
       const shFaIt = XLSX.utils.json_to_sheet([{ factura_numero: "000001", codigo: "SRV-001", nombre: "Servicio de Consultoría", valor: 120000, cantidad: 1, bullets: "Análisis inicial;Informe final" }]);
       XLSX.utils.book_append_sheet(wb, shEm, 'Emisor');
       XLSX.utils.book_append_sheet(wb, shCl, 'Clientes');
@@ -1610,13 +1642,24 @@
             const facturasData = DB.Facturas.map(f => {
                 const cliente = DB.Clientes.find(c => c.nit === f.clienteNit);
                 const sub = (f.items || []).reduce((a, b) => a + b.valor * b.cantidad, 0);
-                const total = sub * (1 + (f.iva / 100));
+                let descVal = 0;
+                if (f.descuentoTipo === 'porcentaje') {
+                    descVal = sub * ((f.descuentoValor || 0) / 100);
+                } else {
+                    descVal = f.descuentoValor || 0;
+                }
+                const subConDescuento = sub - descVal;
+                const ivaVal = subConDescuento * ((f.iva || 0) / 100);
+                const total = subConDescuento + ivaVal;
+
                 return {
                     numero: safeText(f.numero),
                     fecha: f.fecha,
                     clienteNit: safeText(f.clienteNit),
                     iva: f.iva,
                     notas: safeText(f.notas),
+                    descuentoTipo: f.descuentoTipo || 'porcentaje',
+                    descuentoValor: f.descuentoValor || 0,
                     cliente_nombre: safeText(cliente?.nombre || 'N/A'),
                     total_factura: total
                 };
@@ -1669,12 +1712,12 @@
                     const factura = {
                         numero: String(r.numero || '').trim(),
                         fecha: r.fecha || today(),
-                   
                         clienteNit: String(r.clienteNit || '').trim(),
                         items: [],
                         iva: Number(r.iva || 0),
                         notas: r.notas || '',
-             
+                        descuentoTipo: r.descuentoTipo || 'porcentaje',
+                        descuentoValor: Number(r.descuentoValor || 0),
                         evidenciasCount: 0
                     };
                     
@@ -1683,7 +1726,6 @@
                         codigo: it.codigo,
                         nombre: it.nombre,
                         valor: it.valor,
-                      
                         cantidad: it.cantidad,
                         bullets: String(it.bullets || '').split(';').map(s => s.trim()).filter(Boolean)
                     }));
@@ -1710,7 +1752,17 @@
       if(FACT.items.length===0) return showToast('Agrega al menos un ítem', 'error');
       const nit = $('#selCliente').value; if(!nit) return showToast('Selecciona un cliente', 'error');
       const numero = ($('#fc_num').value.trim()) || nextInvoiceNumber();
-      const rec = { numero, fecha: $('#fc_fecha').value || today(), clienteNit: nit, items: FACT.items, iva: Number($('#fc_iva').value||0), notas: $('#fc_notas').value.trim(), evidenciasCount: FACT.evidencias.length };
+      const rec = { 
+        numero, 
+        fecha: $('#fc_fecha').value || today(), 
+        clienteNit: nit, 
+        items: FACT.items, 
+        iva: Number($('#fc_iva').value||0), 
+        notas: $('#fc_notas').value.trim(), 
+        evidenciasCount: FACT.evidencias.length,
+        descuentoTipo: FACT.descuentoTipo,
+        descuentoValor: FACT.descuentoValor
+      };
       DB.Facturas.push(rec); 
       saveDB();
       paintTablaFacturas();
@@ -1878,8 +1930,15 @@
 
       let finalY = doc.lastAutoTable.finalY + 30;
       const sub = (facturaData.items || []).reduce((a,b)=> a + b.valor*b.cantidad, 0);
-      const ivaVal = sub * ((facturaData.iva || 0)/100);
-      const tot = sub + ivaVal;
+      let descVal = 0;
+        if (facturaData.descuentoTipo === 'porcentaje') {
+            descVal = sub * ((facturaData.descuentoValor || 0) / 100);
+        } else {
+            descVal = facturaData.descuentoValor || 0;
+        }
+      const subConDescuento = sub - descVal;
+      const ivaVal = subConDescuento * ((facturaData.iva || 0)/100);
+      const tot = subConDescuento + ivaVal;
       
       const totalsX = page.w - page.m - 200;
       
@@ -1919,6 +1978,17 @@
       doc.setFontSize(10);
       doc.text('Subtotal:', totalsX, finalY);
       doc.text(currency(sub), page.w - page.m, finalY, { align: 'right' });
+      
+      if (descVal > 0) {
+        finalY += 20;
+        doc.setTextColor(mutedColor);
+        const descLabel = `Descuento (${facturaData.descuentoTipo === 'porcentaje' ? `${facturaData.descuentoValor || 0}%` : 'fijo'})`;
+        doc.text(descLabel, totalsX, finalY);
+        doc.setTextColor('#10b981'); // Color verde para el descuento
+        doc.text(`- ${currency(descVal)}`, page.w - page.m, finalY, { align: 'right' });
+        doc.setTextColor(textColor);
+      }
+
       finalY += 20;
       doc.text(`IVA (${facturaData.iva || 0}%)`, totalsX, finalY);
       doc.text(currency(ivaVal), page.w - page.m, finalY, { align: 'right' });
@@ -1933,7 +2003,7 @@
       // Mostrar total en letras debajo del valor numérico
       finalY += 20;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(8); // Tamaño de letra para el valor en palabras
       doc.setTextColor(mutedColor);
       doc.text("Son: " + numeroALetras(Math.round(tot)), totalsX, finalY, { align: 'left' });
 
@@ -2054,5 +2124,6 @@
       });
     })();
   </script>
+
 </body>
 </html>
