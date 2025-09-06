@@ -1169,7 +1169,7 @@
       Emisor: { nombre: '', nit: '', direccion: '', telefono: '', correo: '', logo: '' },
       Clientes: [],
       Productos: [],
-      Facturas: [] // {numero,fecha,clienteNit,items:[...], iva, notas, evidenciasCount, descuentoTipo, descuentoValor}
+      Facturas: [] 
     };
     let DB = loadDB();
 
@@ -1217,9 +1217,8 @@
 
     function checkPassword(password) {
       const storedHash = localStorage.getItem(PASS_KEY);
-      // Si no hay contraseña establecida, usar la predeterminada "1234"
       if (!storedHash) {
-        const defaultHash = hashPassword("1234");
+        const defaultHash = hashPassword("****");
         localStorage.setItem(PASS_KEY, defaultHash);
         return hashPassword(password) === defaultHash;
       }
@@ -2000,7 +1999,6 @@
       doc.setFontSize(14);
       doc.text('TOTAL:', totalsX, finalY);
       doc.text(currency(tot), page.w - page.m, finalY, { align: 'right' });
-      // Mostrar total en letras debajo del valor numérico
       finalY += 20;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8); // Tamaño de letra para el valor en palabras
