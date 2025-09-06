@@ -8,279 +8,722 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <style>
     /* ==================
-       Diseño Moderno
+       Diseño Moderno 2.0 (Corregido)
        ================== */
     :root {
-      --bg: #f4f7fa;
+      --bg: #f7f9fc;
       --card: #ffffff;
-      --ink: #1a1c1e;
+      --ink: #111827;
       --muted: #6b7280;
-      --primary: #0ea5e9; 
-      --primary-dark: #0284c7;
-      --primary-light: #e0f2fe;
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --primary-light: #eff6ff;
       --accent: #111827;
       --line: #e5e7eb;
       --danger: #ef4444;
-      --sidebar-bg: #0f172a;
-      --sidebar-ink: #cbd5e1;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --sidebar-bg: #111827;
+      --sidebar-ink: #d1d5db;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    * { box-sizing: border-box; }
-    body {
+    
+    * { 
+      box-sizing: border-box; 
       margin: 0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      background: var(--bg); color: var(--ink);
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg); 
+      color: var(--ink);
       font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Estilos para la barrera de login */
+    /* Estilos para la barrera de login mejorada con efecto glassmorphism */
     #login-wall {
       position: fixed;
       inset: 0;
-      background-color: rgba(244, 247, 250, 0.95);
+      background-color: rgba(247, 249, 252, 0.8);
       z-index: 200;
       display: flex;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(10px);
+      transition: opacity 0.3s ease;
     }
+    
     .login-box {
-      background: var(--card);
-      padding: 32px;
-      border-radius: 16px;
-      border: 1px solid var(--line);
-      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      background: rgba(255, 255, 255, 0.8);
+      padding: 2.5rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: var(--shadow-lg);
       text-align: center;
       width: 90%;
-      max-width: 380px;
+      max-width: 400px;
+      animation: slideUp 0.5s ease;
     }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
     .login-box h3 {
-      margin: 0 0 8px 0;
-      font-size: 22px;
+      margin: 0 0 0.5rem 0;
+      font-size: 1.75rem;
       color: var(--ink);
+      font-weight: 700;
     }
+    
     .login-box p {
-      margin: 0 0 24px 0;
+      margin: 0 0 1.5rem 0;
       color: var(--muted);
     }
-    #login-password {
-      margin-bottom: 16px;
-      text-align: center;
-      font-size: 16px;
+    
+    .login-input {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+      transition: var(--transition);
+      font-size: 1rem;
+      margin-bottom: 1rem;
     }
+    
+    .login-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    }
+    
     #login-button {
       width: 100%;
-      padding: 12px;
-      font-size: 16px;
+      padding: 0.85rem;
+      font-size: 1rem;
       background: var(--primary);
-      border-color: var(--primary);
+      border: none;
       color: #fff;
-      border-radius: 12px;
+      border-radius: var(--radius);
       cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
     }
+    
+    #login-button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    
     .login-error-message {
-      margin-top: 12px !important;
+      margin-top: 1rem !important;
       color: var(--danger) !important;
-      display: none; /* Oculto por defecto */
+      display: none;
+      background: rgba(239, 68, 68, 0.1);
+      padding: 0.75rem;
+      border-radius: var(--radius);
     }
 
     .app-layout {
       display: grid;
-      grid-template-columns: 240px 1fr;
+      grid-template-columns: 260px 1fr;
       min-height: 100vh;
     }
+    
     .sidebar {
       background: var(--sidebar-bg);
       color: var(--sidebar-ink);
-      padding: 20px;
+      padding: 1.5rem;
       display: flex;
       flex-direction: column;
+      /* position: fixed; <-- ESTA LÍNEA SE ELIMINÓ */
+      height: 100vh;
+      overflow-y: auto;
+      border-right: 1px solid var(--line);
     }
+    
     .sidebar h1 {
-      font-size: 20px;
+      font-size: 1.5rem;
       color: #fff;
-      margin: 0 0 30px 0;
-      display: flex; align-items: center; gap: 8px;
+      margin: 0 0 2.5rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
     }
+    
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
     .sidebar-nav a {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      border-radius: 10px;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius);
       color: var(--sidebar-ink);
       text-decoration: none;
       font-weight: 500;
-      margin-bottom: 6px;
-      transition: .2s background, .2s color;
+      transition: var(--transition);
     }
-    .sidebar-nav a:hover { background: #1e293b; }
+    
+    .sidebar-nav a:hover {
+      background: #1f2937;
+      color: #fff;
+    }
+    
     .sidebar-nav a.active {
       background: var(--primary);
       color: #fff;
+      font-weight: 600;
     }
-    .sidebar-nav a svg { width: 20px; height: 20px; }
+    
+    .sidebar-nav a svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    
     .sidebar-footer {
-        margin-top: auto;
-        font-size: 12px;
-        color: #64748b;
+      margin-top: auto;
+      font-size: 0.8rem;
+      color: #6b7280;
+      padding-top: 1.5rem;
+      text-align: center;
     }
 
-    .main-content { padding: 30px; }
-    .page { display: none; }
-    .page.active { display: block; }
+    .main-content {
+      padding: 2.5rem;
+      /* margin-left: 260px; <-- ESTA LÍNEA SE ELIMINÓ */
+      /* width: calc(100% - 260px); <-- ESTA LÍNEA SE ELIMINÓ */
+    }
+    
+    .page {
+      display: none;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .page.active {
+      display: block;
+    }
     
     .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
-      gap: 16px; flex-wrap: wrap;
+      margin-bottom: 2rem;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
-    .page-header h2 {
-        margin:0; font-size: 24px;
-        display:flex; align-items:center;
-        gap: 10px;
-    }
-    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
     
-    .grid { display: grid; gap: 24px; }
-    .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .page-header h2 {
+      margin: 0;
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+    }
+    
+    .toolbar {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    
+    .grid {
+      display: grid;
+      gap: 1.75rem;
+    }
+    
+    .cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    
+    .cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     
     .card {
       background: var(--card);
-      border: 1px solid var(--line); border-radius: 16px; padding: 24px;
-      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
     }
-    .card h3 { margin: 0 0 16px 0; font-size: 18px; }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
     
-    label { font-size: 12px; font-weight: 500; color: var(--muted); display: block; margin-bottom: 6px; }
+    .card h3 {
+      margin: 0 0 1.25rem 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    
+    label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+    
     input, select, textarea {
-      width: 100%; padding: 10px 12px;
-      border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
-      outline: none; transition: .2s border; font-size: 14px;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--ink);
+      outline: none;
+      transition: var(--transition);
+      font-size: 0.9rem;
     }
-    input:focus, select:focus, textarea:focus { border-color: var(--primary); }
-    textarea { resize: vertical; min-height: 42px; }
     
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      background: var(--card);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 6rem;
+    }
+    
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    
     .btn {
-      appearance: none; border: 1px solid var(--accent); background: var(--accent);
-      color: #fff; padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 600;
-      display: inline-flex; align-items: center; gap: 8px; transition: .2s opacity;
+      appearance: none;
+      border: 1px solid transparent;
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition);
+      font-size: 0.875rem;
     }
-    .btn:hover { opacity: 0.85; }
-    .btn.primary { background: var(--primary); border-color: var(--primary); }
-    .btn.secondary { background: transparent; color: var(--accent); }
-    .btn.ghost { border-color: var(--line); background: #fff;
-      color: var(--ink); }
-    .btn.danger { background: var(--danger); border-color: var(--danger); }
-    .btn:disabled { opacity: .5;
-      cursor: not-allowed; }
-    .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
-    .btn-icon { padding: 8px; }
-
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid var(--line); padding: 12px 8px; text-align: left; font-size: 14px; vertical-align: top; }
-    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-    tbody tr:hover { background: var(--bg); }
-    .right { text-align: right; }
     
-    .hr { height: 1px; background: var(--line); margin: 24px 0; }
-    .mini { font-size: 12px; color: var(--muted); }
-    .logo-preview {
-  width: 140px;
-  height: 80px;
-  max-width: 100%;
-  max-height: 80px;
-  object-fit: contain;
-  border: 2px dashed var(--line);
-  border-radius: 12px;
-  background: var(--bg);
-  padding: 5px;
-  display: block;
-}
-@media (max-width: 900px) {
-  .logo-preview {
-    width: 100px;
-    height: 60px;
-    max-width: 100%;
-    max-height: 60px;
-  }
-}
-    .thumbs { display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px,1fr)); gap: 10px; margin-top: 10px; }
-    .thumb { border: 1px solid var(--line); border-radius: 12px;
-      overflow: hidden; background:#fff; }
-    .thumb img { width: 100%; height: 80px; object-fit: cover; display: block; }
-    .total-box { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-
-    /* Modal */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
-      display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-    .modal-box { background: var(--card); border-radius: 16px; padding: 24px;
-      width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
     }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .modal-header h3 { margin: 0; }
     
-    /* Toast */
-    .toast { position: fixed;
-      bottom: 20px; right: 20px; background: var(--accent); color: #fff; padding: 14px 20px; border-radius: 10px; z-index: 101; font-weight: 500; opacity: 0;
-      transform: translateY(20px); transition: .3s all; }
-    .toast.show { opacity: 1; transform: translateY(0); }
-
-    footer {
-        position: fixed; bottom: 0; left: 0;
-        right: 0;
-        text-align: center;
-        padding: 8px;
+    .btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    
+    .btn.secondary {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      border-color: transparent;
+    }
+     .btn.secondary:hover {
+      background: #dbeafe;
+    }
+    
+    .btn.ghost {
+      border-color: var(--line);
+      background: var(--card);
+      color: var(--ink);
+    }
+     .btn.ghost:hover {
         background: var(--bg);
-        font-size: 12px;
-        color: var(--muted);
-        border-top: 1px solid var(--line);
-        margin-left: 240px; /* Ancho del sidebar */
+        border-color: var(--muted);
+     }
+    
+    .btn.danger {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
     }
     
-    @media (max-width: 900px) {
-      .app-layout { grid-template-columns: 1fr; }
-      .sidebar { display: none; }
-      .cols-3, .cols-2, .row { grid-template-columns: 1fr; }
-      .main-content { padding: 15px; }
-      footer { margin-left: 0; }
+    .btn.success {
+      background: var(--success);
+      border-color: var(--success);
+       color: #fff;
     }
     
+    .btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+       transform: none;
+       box-shadow: none;
+    }
+    
+    .btn-sm {
+      padding: 0.5rem 0.85rem;
+      font-size: 0.8rem;
+    }
+    
+    .btn-icon {
+      padding: 0.6rem;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 1rem 0.75rem;
+      text-align: left;
+      font-size: 0.9rem;
+      vertical-align: middle;
+    }
+    
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    
+    tbody tr:hover {
+      background: var(--primary-light);
+    }
+    
+    .right {
+      text-align: right;
+    }
+    
+    .hr {
+      height: 1px;
+      background: var(--line);
+      margin: 2rem 0;
+      border: none;
+    }
+    
+    .mini {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    
+    .logo-preview {
+      width: 140px;
+      height: 80px;
+      max-width: 100%;
+      max-height: 80px;
+      object-fit: contain;
+      border: 2px dashed var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      padding: 0.5rem;
+      display: block;
+    }
+    
+    .thumbs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+    
+    .thumb {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #fff;
+      position: relative;
+    }
+    
+    .thumb img {
+      width: 100%;
+      height: 80px;
+      object-fit: cover;
+      display: block;
+    }
+    
+    .thumb-remove {
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 1.5rem;
+      height: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    
+    .total-box {
+      background: var(--primary-light);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    
+    /* Modal mejorado con efecto glassmorphism */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.6);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .modal-box {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 2rem;
+      width: 90%;
+      max-width: 550px;
+      box-shadow: var(--shadow-lg);
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideUp 0.4s ease;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    
+    /* Toast mejorado */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--accent);
+      color: #fff;
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius);
+      z-index: 101;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: var(--transition);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    .toast.warning { background: var(--warning); }
+    
+    footer {
+      text-align: center;
+      padding: 0.75rem;
+      background: var(--bg);
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      /* Se quita position fixed para que quede al final del grid */
+      grid-column: 1 / 3; /* Ocupa ambas columnas del grid */
+    }
+    
+    /* Mejoras para la página de configuración */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.75rem;
+    }
+    
+    .password-card {
+      margin-top: 1.75rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+      }
+      
+      .sidebar {
+        position: fixed; /* Se devuelve a fixed solo para móvil */
+        left: -260px;
+        transition: left 0.3s ease;
+        z-index: 90;
+      }
+      
+      .sidebar.active {
+        left: 0;
+      }
+      
+      .main-content {
+        margin-left: 0; /* Se mantiene en 0 para móvil */
+        width: 100%;
+      }
+      
+      footer {
+        grid-column: 1 / 2; /* Se resetea para móvil */
+        position: fixed; /* Se devuelve a fixed para móvil */
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+      
+      .cols-3, .cols-2, .row {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    @media (max-width: 640px) {
+      .main-content {
+        padding: 1.5rem;
+      }
+      
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .toolbar {
+        width: 100%;
+      }
+    }
+    
+    /* Tema oscuro */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --ink: #f8fafc;
+        --muted: #94a3b8;
+        --line: #334155;
+        --sidebar-bg: #0b1120;
+      }
+      
+      input, select, textarea {
+        background: #0f172a;
+        color: var(--ink);
+        border-color: var(--line);
+      }
+       input:focus, select:focus, textarea:focus {
+        background: var(--card);
+      }
+      
+      .total-box {
+        background: #0f172a;
+        border: 1px solid var(--line);
+      }
+       
+      #login-wall {
+        background-color: rgba(15, 23, 42, 0.8);
+      }
+      .login-box {
+        background: rgba(30, 41, 59, 0.8);
+        border-color: rgba(51, 65, 85, 0.9);
+      }
+    }
+    
+    /* Estilos para impresión */
     @media print {
-        body { background: #fff;
-        font-size: 10pt; }
-        .app-layout { display: block; }
-        .sidebar, footer, .main-content .page-header, .toolbar, #page_factura > .card > div:first-child {
-            display: none !important;
-        }
-        .main-content { padding: 0; }
-        .card { 
-            box-shadow: none;
-            border: none;
-            padding: 0;
-        }
-        #page_factura {
-            visibility: hidden;
-        }
-        #invoice-print-area, #invoice-print-area * {
-            visibility: visible;
-        }
-        #invoice-print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
-        .btn { display: none; }
-        input, select, textarea { border: 1px solid transparent; }
+      body {
+        background: #fff;
+        font-size: 10pt;
+      }
+      
+      .app-layout {
+        display: block;
+      }
+      
+      .sidebar, footer, .main-content .page-header, .toolbar, #page_factura > .card > div:first-child {
+        display: none !important;
+      }
+      
+      .main-content {
+        padding: 0;
+        margin: 0;
+        width: 100%;
+      }
+      
+      .card {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+      }
+      
+      #page_factura {
+        visibility: hidden;
+      }
+      
+      #invoice-print-area, #invoice-print-area * {
+        visibility: visible;
+      }
+      
+      #invoice-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+      
+      .btn {
+        display: none;
+      }
+      
+      input, select, textarea {
+        border: 1px solid transparent;
+        background: transparent;
+      }
     }
-  </style>
+</style>
 </head>
 <body>
   
@@ -288,7 +731,7 @@
     <div class="login-box">
       <h3>Iniciar Sesión</h3>
       <p>Ingresa la contraseña para acceder al facturador.</p>
-      <input type="password" id="login-password" placeholder="Contraseña" />
+      <input type="password" id="login-password" class="login-input" placeholder="Contraseña" />
       <button id="login-button">Entrar</button>
       <p id="login-error" class="login-error-message">Contraseña incorrecta.</p>
     </div>
@@ -358,8 +801,7 @@
                 <div>
                     
                 <label>Agregar producto/servicio</label>
-                    <div style="display:grid;
- grid-template-columns: 1fr 80px 120px; gap:8px;">
+                    <div style="display:grid; grid-template-columns: 1fr 80px 120px; gap:8px;">
                         <select id="selProducto"></select>
                         <input id="selCantidad" type="number" min="1" step="1" value="1" />
                         <button class="btn primary" id="btnAgregarItemFactura">Añadir</button>
@@ -368,7 +810,7 @@
                 </div>
             </div>
             
-            <div class="hr"></div>
+            <hr class="hr" />
 
             <div class="grid cols-3" style="gap: 16px;">
                 <div style="grid-column: 1 / 3;">
@@ -438,8 +880,7 @@
                 </div>
             </div>
 
-            <div class="toolbar" style="margin-top:24px;
- justify-content:flex-end;">
+            <div class="toolbar" style="margin-top:24px; justify-content:flex-end;">
                 <button class="btn ghost" id="btnGuardarFactura">🧷 Guardar Factura</button>
                 <button class="btn ghost" id="btnPrintInvoice">🖨️ Imprimir Factura</button>
                 <button class="btn primary" id="btnGenerarPDF">📄 Generar PDF</button>
@@ -454,6 +895,9 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
                 <span>Historial de Facturas</span>
             </h2>
+            <div class="toolbar">
+                <input type="text" id="searchFacturas" placeholder="Buscar facturas..." style="max-width: 250px;" />
+            </div>
         </div>
         <div class="card">
     
@@ -474,6 +918,7 @@
   
              </h2>
               <div class="toolbar">
+                <input type="text" id="searchClientes" placeholder="Buscar clientes..." style="max-width: 250px;" />
                 <button class="btn primary" id="btnNuevoCliente">➕ Agregar Cliente</button>
               </div>
           </div>
@@ -496,6 +941,7 @@
        
              </h2>
             <div class="toolbar">
+              <input type="text" id="searchProductos" placeholder="Buscar productos..." style="max-width: 250px;" />
               <button class="btn primary" id="btnNuevoProducto">➕ Agregar Producto</button>
             </div>
         </div>
@@ -519,20 +965,18 @@
             </h2>
         </div>
   
-           <div class="grid cols-2">
+           <div class="config-grid">
             <div class="card">
                 <h3>Datos del Emisor</h3>
                 <div class="row">
                     <div>
                         
                 <label>Nombre / Razón Social</label>
-                        <input id="em_nombre" placeholder="Ej.
- Chocó Creativo SAS" />
+                        <input id="em_nombre" placeholder="Ej. Chocó Creativo SAS" />
                     </div>
                     <div>
                         <label>NIT</label>
-                        <input id="em_nit" placeholder="Ej.
- 900123456-7" />
+                        <input id="em_nit" placeholder="Ej. 900123456-7" />
                     </div>
                     <div>
                         <label>Dirección</label>
@@ -552,9 +996,8 @@
                 </div>
                 <div style="margin-top:16px;">
                     <label>Logo (opcional)</label>
-                    <div style="display:flex;
- align-items:flex-end; gap:16px;">
-                        <img id="logoPreview" class="logo-preview" alt="logo preview" src="img/logo.png" />
+                    <div style="display:flex; align-items:flex-end; gap:16px;">
+                        <img id="logoPreview" class="logo-preview" alt="logo preview" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTQwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iODAiIGZpbGw9IiNGM0Y0RjYiIHJ4PSI4Ii8+PHN2ZyB4PSI1MCIgeT0iMjUiIHdpZHRoPSI0MCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Q0EwQUIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTUgM0g2YTIgMiAwIDAgMC0yIDJ2MTRhMiAyIDAgMCAwIDIgMmgxMmEyIDIgMCAwIDAgMi0yVjlabTAgNGg0YTIgMiAwIDAgMSAyIDJ2MGEyIDIgMCAwIDEtMiAyaC00YTIgMiAwIDAgMS0yLTJ2MGEyIDIgMCAwIDEgMi0yeiIvPjwvc3ZnPjx0ZXh0IHg9IjcwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBMEFCIj5Mb2dvIGRlIGxhIGVtcHJlc2E8L3RleHQ+PC9zdmc+" />
                         <input type="file" id="em_logo" accept="image/*" />
                     </div>
                 </div>
@@ -563,12 +1006,11 @@
                     <button class="btn primary" id="btnGuardarEmisor">Guardar Emisor</button>
                 </div>
             </div>
+            
             <div class="card">
                 <h3>Base de Datos</h3>
-     
-                   <p class="mini">Importa o exporta toda tu información (emisor, clientes, productos y facturas) usando un archivo Excel.</p>
-                <div class="toolbar" style="flex-direction:column;
- align-items:stretch; gap:12px; margin-top:20px;">
+                <p class="mini">Importa o exporta toda tu información (emisor, clientes, productos y facturas) usando un archivo Excel.</p>
+                <div class="toolbar" style="flex-direction:column; align-items:stretch; gap:12px; margin-top:20px;">
                     <button class="btn ghost" id="btnImportExcel">📥 Importar desde Excel</button>
                     <button class="btn ghost" id="btnExportExcel">📤 Exportar Base a Excel</button>
                     <button class="btn secondary" id="btnPlantilla">📄 Descargar Plantilla Excel</button>
@@ -577,6 +1019,22 @@
                     <button class="btn danger" id="btnLimpiarDB">🗑️ Restablecer toda la aplicación</button>
                 </div>
                 <input type="file" id="inputExcel" accept=".xlsx,.xls" style="display:none" />
+            </div>
+            
+            <div class="card password-card">
+                <h3>Seguridad</h3>
+                <p class="mini">Cambia la contraseña de acceso a la aplicación.</p>
+                <div style="margin-top:16px;">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" id="new-password" class="login-input" placeholder="Nueva contraseña" />
+                </div>
+                <div style="margin-top:16px;">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" id="confirm-password" class="login-input" placeholder="Confirmar contraseña" />
+                </div>
+                <div class="toolbar" style="margin-top:24px;">
+                    <button class="btn primary" id="btnCambiarPassword">Cambiar Contraseña</button>
+                </div>
             </div>
         </div>
       </section>
@@ -587,7 +1045,7 @@
       <div class="modal-box">
           <div class="modal-header">
             <h3 id="modalClienteTitle">Agregar Cliente</h3>
-            <button class="btn ghost btn-icon" onclick="$('#modalCliente').style.display='none'">&times;</button>
+            <button class="btn ghost btn-icon" onclick="document.getElementById('modalCliente').style.display='none'">&times;</button>
           </div>
           <input type="hidden" id="cl_edit_idx">
           <div class="row">
@@ -598,9 +1056,8 @@
             <div><label>Teléfono</label><input id="cl_tel" /></div>
           </div>
           <div style="margin-top:16px"><label>Correo</label><input id="cl_mail" /></div>
-          <div class="toolbar" style="margin-top:24px;
- justify-content:flex-end">
-            <button class="btn ghost" onclick="$('#modalCliente').style.display='none'">Cancelar</button>
+          <div class="toolbar" style="margin-top:24px; justify-content:flex-end">
+            <button class="btn ghost" onclick="document.getElementById('modalCliente').style.display='none'">Cancelar</button>
             <button class="btn primary" id="btnGuardarCliente">Guardar Cliente</button>
           </div>
       </div>
@@ -610,7 +1067,7 @@
       <div class="modal-box">
           <div class="modal-header">
             <h3 id="modalProductoTitle">Agregar Producto</h3>
-            <button class="btn ghost btn-icon" onclick="$('#modalProducto').style.display='none'">&times;</button>
+            <button class="btn ghost btn-icon" onclick="document.getElementById('modalProducto').style.display='none'">&times;</button>
           </div>
           <input type="hidden" id="pr_edit_idx">
           <div class="row">
@@ -619,9 +1076,8 @@
           </div>
           <div style="margin-top:16px"><label>Valor Unitario</label><input id="pr_val" type="number" min="0" step="0.01" /></div>
           <div style="margin-top:16px"><label>Descripción con viñetas (una por línea)</label><textarea id="pr_bullets" placeholder="• Punto 1\n• Punto 2" rows="3"></textarea></div>
-          <div class="toolbar" style="margin-top:24px;
- justify-content:flex-end">
-            <button class="btn ghost" onclick="$('#modalProducto').style.display='none'">Cancelar</button>
+          <div class="toolbar" style="margin-top:24px; justify-content:flex-end">
+            <button class="btn ghost" onclick="document.getElementById('modalProducto').style.display='none'">Cancelar</button>
             <button class="btn primary" id="btnGuardarProducto">Guardar Producto</button>
           </div>
       </div>
@@ -629,78 +1085,80 @@
   
   <div id="toast" class="toast"></div>
 
-  <footer>Creado por Kevin Hurtado - Uso personal Beta 1</footer>
+  <footer>Creado por Kevin Hurtado - Uso personal Beta 2.0</footer>
 
   <div id="qrcode-container" style="display: none;"></div>
 
   <script>
- // ========================
-// Convertir números a letras (Colombia - COP) en MAYÚSCULAS
-// ========================
-function numeroALetras(num) {
-  const unidades = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
-  const decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
-  const centenas = ["", "cien", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+    // ========================
+    // Convertir números a letras (Colombia - COP) en MAYÚSCULAS
+    // ========================
+    function numeroALetras(num) {
+      const unidades = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
+      const decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+      const centenas = ["", "cien", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
 
-  function convertirMenor1000(n) {
-    if (n === 0) return "";
-    if (n < 10) return unidades[n];
-    if (n < 100) {
-      if (n < 20) {
-        const especiales = {
-          10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce",
-          15: "quince", 16: "dieciséis", 17: "diecisiete", 18: "dieciocho", 19: "diecinueve"
-        };
-        return especiales[n];
+      function convertirMenor1000(n) {
+        if (n === 0) return "";
+        if (n < 10) return unidades[n];
+        if (n < 100) {
+          if (n < 20) {
+            const especiales = {
+              10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce",
+              15: "quince", 16: "dieciséis", 17: "diecisiete", 18: "dieciocho", 19: "diecinueve"
+            };
+            return especiales[n];
+          }
+          if (n % 10 === 0) return decenas[Math.floor(n / 10)];
+          return decenas[Math.floor(n / 10)] + " y " + unidades[n % 10];
+        }
+        if (n < 1000) {
+          if (n === 100) return "cien";
+          if (n % 100 === 0) return centenas[Math.floor(n / 100)];
+          return centenas[Math.floor(n / 100)] + " " + convertirMenor1000(n % 100);
+        }
+        return "";
       }
-      if (n % 10 === 0) return decenas[Math.floor(n / 10)];
-      return decenas[Math.floor(n / 10)] + " y " + unidades[n % 10];
+
+      if (num === 0) return "CERO PESOS M/CTE";
+
+      let millones = Math.floor(num / 1000000);
+      let miles = Math.floor((num % 1000000) / 1000);
+      let resto = num % 1000;
+
+      let texto = "";
+
+      if (millones > 0) {
+        if (millones === 1) texto += "un millón ";
+        else texto += convertirMenor1000(millones) + " millones ";
+      }
+
+      if (miles > 0) {
+        if (miles === 1) texto += "mil ";
+        else texto += convertirMenor1000(miles) + " mil ";
+      }
+
+      if (resto > 0) {
+        texto += convertirMenor1000(resto);
+      }
+
+      return (texto.trim() + " pesos m/cte").toUpperCase();
     }
-    if (n < 1000) {
-      if (n === 100) return "cien";
-      if (n % 100 === 0) return centenas[Math.floor(n / 100)];
-      return centenas[Math.floor(n / 100)] + " " + convertirMenor1000(n % 100);
-    }
-    return "";
-  }
-
-  if (num === 0) return "CERO PESOS M/CTE";
-
-  let millones = Math.floor(num / 1000000);
-  let miles = Math.floor((num % 1000000) / 1000);
-  let resto = num % 1000;
-
-  let texto = "";
-
-  if (millones > 0) {
-    if (millones === 1) texto += "un millón ";
-    else texto += convertirMenor1000(millones) + " millones ";
-  }
-
-  if (miles > 0) {
-    if (miles === 1) texto += "mil ";
-    else texto += convertirMenor1000(miles) + " mil ";
-  }
-
-  if (resto > 0) {
-    texto += convertirMenor1000(resto);
-  }
-
-  return (texto.trim() + " pesos m/cte").toUpperCase();
-}
 
     const MAX_CELL_LENGTH = 32767;
 
     function safeText(text) {
         return String(text || '').substring(0, MAX_CELL_LENGTH);
     }
+    
     // ========================
     // Estado y utilidades base
     // ========================
     const $ = (q) => document.querySelector(q);
     const $$ = (q) => Array.from(document.querySelectorAll(q));
 
-    const LS_KEY = 'facturas_local_db_v3';
+    const LS_KEY = 'facturas_local_db_v4';
+    const PASS_KEY = 'facturas_password_hash';
     const DEFAULT_DB = {
       Emisor: { nombre: '', nit: '', direccion: '', telefono: '', correo: '', logo: '' },
       Clientes: [],
@@ -713,9 +1171,10 @@ function numeroALetras(num) {
       try { return JSON.parse(localStorage.getItem(LS_KEY)) || structuredClone(DEFAULT_DB); }
       catch(e){ return structuredClone(DEFAULT_DB); }
     }
+    
     function saveDB(){ 
         localStorage.setItem(LS_KEY, JSON.stringify(DB));
-        showToast('Base de datos guardada en el navegador ✅');
+        showToast('Base de datos guardada en el navegador ✅', 'success');
     }
 
     function currency(n){
@@ -734,11 +1193,43 @@ function numeroALetras(num) {
       return String(seq).padStart(6,'0');
     }
 
-    function showToast(message) {
+    function showToast(message, type = '') {
         const toast = $('#toast');
         toast.textContent = message;
+        toast.className = 'toast';
+        if (type) toast.classList.add(type);
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ========================
+    // Sistema de autenticación seguro
+    // ========================
+    function hashPassword(password) {
+      return CryptoJS.SHA256(password).toString();
+    }
+
+    function checkPassword(password) {
+      const storedHash = localStorage.getItem(PASS_KEY);
+      
+      if (!storedHash) {
+        const defaultHash = hashPassword("****");
+        localStorage.setItem(PASS_KEY, defaultHash);
+        return hashPassword(password) === defaultHash;
+      }
+      return hashPassword(password) === storedHash;
+    }
+
+    function changePassword(newPassword) {
+      if (newPassword.length < 4) {
+        showToast('La contraseña debe tener al menos 4 caracteres', 'error');
+        return false;
+      }
+      
+      const newHash = hashPassword(newPassword);
+      localStorage.setItem(PASS_KEY, newHash);
+      showToast('Contraseña actualizada correctamente', 'success');
+      return true;
     }
 
     // ========================
@@ -779,7 +1270,7 @@ function numeroALetras(num) {
       if(DB.Emisor.logo){
         $('#logoPreview').src = DB.Emisor.logo;
       } else {
-        $('#logoPreview').src = 'img/logo.png'; // tu logo por defecto
+        $('#logoPreview').src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTQwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iODAiIGZpbGw9IiNGM0Y0RjYiIHJ4PSI4Ii8+PHN2ZyB4PSI1MCIgeT0iMjUiIHdpZHRoPSI0MCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Q0EwQUIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTUgM0g2YTIgMiAwIDAgMC0yIDJ2MTRhMiAyIDAgMCAwIDIgMmgxMmEyIDIgMCAwIDAgMi0yVjlabTAgNGg0YTIgMiAwIDAgMSAyIDJ2MGEyIDIgMCAwIDEtMiAyaC00YTIgMiAwIDAgMS0yLTJ2MGEyIDIgMCAwIDEgMi0yeiIvPjwvc3ZnPjx0ZXh0IHg9IjcwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBMEFCIj5Mb2dvIGRlIGxhIGVtcHJlc2E8L3RleHQ+PC9zdmc+';
       }
     }
 
@@ -873,13 +1364,15 @@ function numeroALetras(num) {
       DB.Emisor.correo = $('#em_mail').value.trim();
       saveDB();
     };
+    
     $('#em_logo').addEventListener('change', async (e) => {
       const file = e.target.files?.[0]; if(!file) return;
       const b64 = await fileToDataURL(file);
       DB.Emisor.logo = b64; 
       $('#logoPreview').src = b64;
-      showToast('Logo actualizado. Recuerda guardar el emisor.');
+      showToast('Logo actualizado. Recuerda guardar el emisor.', 'success');
     });
+    
     $('#btnNuevoCliente').onclick = () => {
         $('#modalClienteTitle').textContent = 'Agregar Cliente';
         $('#cl_edit_idx').value = '';
@@ -887,6 +1380,7 @@ function numeroALetras(num) {
         $('#modalCliente').style.display='flex';
         $('#cl_nit').disabled = false;
     };
+    
     $('#tablaClientes').onclick = (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -910,18 +1404,21 @@ function numeroALetras(num) {
             }
         }
     };
+    
     $('#btnGuardarCliente').onclick = () => {
         const c = { nombre: $('#cl_nombre').value.trim(), nit: $('#cl_nit').value.trim(), direccion: $('#cl_dir').value.trim(), telefono: $('#cl_tel').value.trim(), correo: $('#cl_mail').value.trim() };
-        if(!c.nombre || !c.nit){ return showToast('Nombre y NIT son obligatorios'); }
+        if(!c.nombre || !c.nit){ return showToast('Nombre y NIT son obligatorios', 'error'); }
         const idx = $('#cl_edit_idx').value;
         if (idx) { DB.Clientes[idx] = c; } 
         else {
-            if(DB.Clientes.some(x => x.nit === c.nit)) return showToast('Ese NIT ya existe');
+            if(DB.Clientes.some(x => x.nit === c.nit)) return showToast('Ese NIT ya existe', 'error');
             DB.Clientes.push(c);
         }
         saveDB(); paintAll(); $('#modalCliente').style.display='none';
     };
+    
     $('#selCliente').onchange = updatePreviewCliente;
+    
     $('#btnNuevoProducto').onclick = () => {
         $('#modalProductoTitle').textContent = 'Agregar Producto';
         $('#pr_edit_idx').value = '';
@@ -929,6 +1426,7 @@ function numeroALetras(num) {
         $('#modalProducto').style.display='flex';
         $('#pr_cod').disabled = false;
     };
+    
     $('#tablaProductos').onclick = (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -948,21 +1446,24 @@ function numeroALetras(num) {
             }
         }
     };
+    
     $('#btnGuardarProducto').onclick = () => {
         const p = { codigo: $('#pr_cod').value.trim(), nombre: $('#pr_nom').value.trim(), valor: Number($('#pr_val').value || 0), bullets: ($('#pr_bullets').value || '').split(/\n/).map(s=>s.replace(/^•\s?/,'').trim()).filter(Boolean) };
-        if(!p.codigo || !p.nombre) return showToast('Código y nombre son obligatorios');
+        if(!p.codigo || !p.nombre) return showToast('Código y nombre son obligatorios', 'error');
         const idx = $('#pr_edit_idx').value;
         if (idx) { DB.Productos[idx] = p; }
         else {
-            if(DB.Productos.some(x => x.codigo === p.codigo)) return showToast('Ese código ya existe');
+            if(DB.Productos.some(x => x.codigo === p.codigo)) return showToast('Ese código ya existe', 'error');
             DB.Productos.push(p);
         }
         saveDB(); paintAll(); $('#modalProducto').style.display='none';
     };
+    
     // ========================
     // Constructor de factura
     // ========================
     let FACT = { numero: '', fecha: today(), iva: 0, notas: '', items: [], evidencias: [] };
+    
     function resetFacturaForm() {
         FACT = { numero: '', fecha: today(), iva: 0, notas: '', items: [], evidencias: [] };
         $('#fc_num').value = '';
@@ -974,17 +1475,20 @@ function numeroALetras(num) {
         $('#thumbs').innerHTML = '';
         updatePreviewCliente();
         paintItems();
-        showToast('Formulario limpiado 🧹');
+        showToast('Formulario limpiado 🧹', 'success');
     }
     
     $('#btnNuevaFactura').onclick = resetFacturaForm;
+    
     function initFacturaForm() {
         $('#fc_fecha').value = FACT.fecha;
     }
+    
     initFacturaForm();
+    
     $('#btnAgregarItemFactura').onclick = () => {
       const cod = $('#selProducto').value; const cant = Math.max(1, Number($('#selCantidad').value||1));
-      const p = DB.Productos.find(x => x.codigo === cod); if(!p) return showToast('Selecciona un producto');
+      const p = DB.Productos.find(x => x.codigo === cod); if(!p) return showToast('Selecciona un producto', 'error');
       FACT.items.push({ codigo: p.codigo, nombre: p.nombre, valor: p.valor, cantidad: cant, bullets: p.bullets||[] });
       paintItems();
       $('#selCantidad').value = 1; // Limpia el campo cantidad
@@ -1025,6 +1529,7 @@ function numeroALetras(num) {
     }
 
     ['#fc_iva','#fc_notas','#fc_fecha','#fc_num'].forEach(id => $(id).addEventListener('input', recalcTotals));
+    
     $('#fc_imgs').addEventListener('change', async (e) => {
       FACT.evidencias = [];
       $('#thumbs').innerHTML = '';
@@ -1032,10 +1537,23 @@ function numeroALetras(num) {
         const b64 = await fileToDataURL(file);
         FACT.evidencias.push(b64);
         const d = document.createElement('div'); d.className='thumb';
-        const img = document.createElement('img'); img.src = b64; d.appendChild(img);
+        const img = document.createElement('img'); img.src = b64; 
+        const removeBtn = document.createElement('button'); 
+        removeBtn.className = 'thumb-remove';
+        removeBtn.innerHTML = '✕';
+        removeBtn.onclick = function() {
+          const index = FACT.evidencias.indexOf(b64);
+          if (index > -1) {
+            FACT.evidencias.splice(index, 1);
+            d.remove();
+          }
+        };
+        d.appendChild(img);
+        d.appendChild(removeBtn);
         $('#thumbs').appendChild(d);
       }
     });
+    
     // ========================
     // Excel
     // ========================
@@ -1043,6 +1561,7 @@ function numeroALetras(num) {
     $('#btnExportExcel').onclick = exportExcel;
     $('#btnImportExcel').onclick = () => $('#inputExcel').click();
     $('#inputExcel').addEventListener('change', importExcel, false);
+    
     function downloadTemplateExcel(){
       const wb = XLSX.utils.book_new();
       const shEm = XLSX.utils.json_to_sheet([{ nombre: "Mi Empresa SAS", nit: "900123456-7", direccion: "Calle 1 #2-34", telefono: "+57 3xx xxx xxxx", correo: "facturacion@miempresa.com" }]);
@@ -1124,7 +1643,7 @@ function numeroALetras(num) {
             XLSX.writeFile(wb, `base_facturacion_${today()}.xlsx`);
         } catch (e) {
             console.error(e);
-            alert('Error al exportar a Excel: ' + e.message);
+            showToast('Error al exportar a Excel: ' + e.message, 'error');
         }
     }
     
@@ -1174,10 +1693,11 @@ function numeroALetras(num) {
 
                 saveDB();
                 paintAll();
+                showToast('Datos importados correctamente', 'success');
 
             } catch (err) {
                 console.error("Error al importar el archivo:", err);
-                showToast("Error al procesar el archivo Excel. Verifique el formato.");
+                showToast("Error al procesar el archivo Excel. Verifique el formato.", 'error');
             }
         };
         reader.readAsArrayBuffer(file);
@@ -1187,23 +1707,24 @@ function numeroALetras(num) {
     // Acciones de Factura y App
     // ========================
     $('#btnGuardarFactura').onclick = () => {
-      if(FACT.items.length===0) return showToast('Agrega al menos un ítem');
-      const nit = $('#selCliente').value; if(!nit) return showToast('Selecciona un cliente');
+      if(FACT.items.length===0) return showToast('Agrega al menos un ítem', 'error');
+      const nit = $('#selCliente').value; if(!nit) return showToast('Selecciona un cliente', 'error');
       const numero = ($('#fc_num').value.trim()) || nextInvoiceNumber();
       const rec = { numero, fecha: $('#fc_fecha').value || today(), clienteNit: nit, items: FACT.items, iva: Number($('#fc_iva').value||0), notas: $('#fc_notas').value.trim(), evidenciasCount: FACT.evidencias.length };
       DB.Facturas.push(rec); 
       saveDB();
       paintTablaFacturas();
       $('#fc_num').value = numero;
+      showToast('Factura guardada correctamente', 'success');
     };
 
     $('#btnPrintInvoice').onclick = () => { window.print(); }
 
     $('#btnGenerarPDF').onclick = async () => {
-        if(FACT.items.length===0) return showToast('Agrega al menos un ítem');
-        const nit = $('#selCliente').value; if(!nit) return showToast('Selecciona un cliente');
+        if(FACT.items.length===0) return showToast('Agrega al menos un ítem', 'error');
+        const nit = $('#selCliente').value; if(!nit) return showToast('Selecciona un cliente', 'error');
         const cliente = DB.Clientes.find(x => x.nit === nit);
-        if(!cliente) return showToast('Cliente no encontrado en la base de datos');
+        if(!cliente) return showToast('Cliente no encontrado en la base de datos', 'error');
         
         const numero = ($('#fc_num').value.trim()) || nextInvoiceNumber();
         $('#fc_num').value = numero;
@@ -1219,28 +1740,45 @@ function numeroALetras(num) {
         const action = btn.dataset.action;
         const idx = btn.dataset.idx;
         const factura = DB.Facturas[idx];
-        if (!factura) return showToast('Factura no encontrada');
+        if (!factura) return showToast('Factura no encontrada', 'error');
 
         if (action === 'download') {
             const cliente = DB.Clientes.find(c => c.nit === factura.clienteNit);
-            if(!cliente) return showToast('Cliente de la factura no encontrado');
+            if(!cliente) return showToast('Cliente de la factura no encontrado', 'error');
             await generarPDF(factura, cliente, []);
         } else if (action === 'delete') {
             if (confirm(`¿Seguro que quieres eliminar la factura N° ${factura.numero}?`)) {
                 DB.Facturas.splice(idx, 1);
                 saveDB();
                 paintTablaFacturas();
+                showToast('Factura eliminada', 'success');
             }
         }
     };
+    
     $('#btnLimpiarDB').onclick = () => {
       if (confirm('ADVERTENCIA: ¿Estás seguro de que quieres borrar TODA la información?\n\nEsta acción es irreversible y eliminará emisor, clientes, productos y todas las facturas.')) {
         localStorage.removeItem(LS_KEY);
         localStorage.removeItem('seq_facturas_v3');
-        showToast('Toda la información ha sido eliminada. La aplicación se recargará.');
+        showToast('Toda la información ha sido eliminada. La aplicación se recargará.', 'success');
         setTimeout(() => {
           location.reload();
         }, 1500);
+      }
+    };
+    
+    $('#btnCambiarPassword').onclick = () => {
+      const newPassword = $('#new-password').value;
+      const confirmPassword = $('#confirm-password').value;
+      
+      if (newPassword !== confirmPassword) {
+        showToast('Las contraseñas no coinciden', 'error');
+        return;
+      }
+      
+      if (changePassword(newPassword)) {
+        $('#new-password').value = '';
+        $('#confirm-password').value = '';
       }
     };
 
@@ -1393,11 +1931,11 @@ function numeroALetras(num) {
       doc.text('TOTAL:', totalsX, finalY);
       doc.text(currency(tot), page.w - page.m, finalY, { align: 'right' });
       // Mostrar total en letras debajo del valor numérico
-finalY += 20;
-doc.setFont('helvetica', 'normal');
-doc.setFontSize(10);
-doc.setTextColor(mutedColor);
-doc.text("Son: " + numeroALetras(Math.round(tot)), totalsX, finalY, { align: 'left' });
+      finalY += 20;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(mutedColor);
+      doc.text("Son: " + numeroALetras(Math.round(tot)), totalsX, finalY, { align: 'left' });
 
       if(evidencias.length){
         doc.addPage();
@@ -1431,6 +1969,7 @@ doc.text("Son: " + numeroALetras(Math.round(tot)), totalsX, finalY, { align: 'le
       }
 
       doc.save(`Factura_${facturaData.numero}.pdf`);
+      showToast('PDF generado correctamente', 'success');
     };
 
     // ========================
@@ -1441,20 +1980,58 @@ doc.text("Son: " + numeroALetras(Math.round(tot)), totalsX, finalY, { align: 'le
     }
 
     // ========================
+    // Funcionalidades de búsqueda
+    // ========================
+    function setupSearch() {
+      // Búsqueda en clientes
+      $('#searchClientes').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = $('#tablaClientes').querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+      });
+      
+      // Búsqueda en productos
+      $('#searchProductos').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = $('#tablaProductos').querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+      });
+      
+      // Búsqueda en facturas
+      $('#searchFacturas').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = $('#tablaFacturas').querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+      });
+    }
+
+    // ========================
     // Init
     // ========================
     (function init(){
       // Lógica de la barrera de login
-      const MI_CONTRASENA = "1234"; // ¡CAMBIA ESTA CONTRASEÑA!
-
       const loginWall = document.getElementById('login-wall');
       const passwordInput = document.getElementById('login-password');
       const loginButton = document.getElementById('login-button');
       const loginError = document.getElementById('login-error');
       
       function intentarLogin() {
-        if (passwordInput.value === MI_CONTRASENA) {
+        if (checkPassword(passwordInput.value)) {
           loginWall.style.display = 'none'; // Oculta la barrera
+          paintAll();
+          setupSearch();
         } else {
           loginError.style.display = 'block'; // Muestra error
           passwordInput.value = '';
@@ -1475,8 +2052,6 @@ doc.text("Son: " + numeroALetras(Math.round(tot)), totalsX, finalY, { align: 'le
         passwordInput.value = ''; // Limpia el campo de contraseña
         loginError.style.display = 'none'; // Oculta cualquier mensaje de error previo
       });
-      
-      paintAll();
     })();
   </script>
 </body>
