@@ -3,16 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Generador de Facturas Pro</title>
+  <title>Generador de Facturas Pro+</title>
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="apple-touch-icon" href="img/favicon.png">
+  <description>Generador de Facturas Intranet  - Crea y administra tus facturas fácilmente.</description>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   
-  <!-- SDK de Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   
     const firebaseConfig = {
@@ -26,9 +29,11 @@
     };
   
     const app = initializeApp(firebaseConfig);
+    window.auth = getAuth(app);
     window.db = getFirestore(app);
     window.firebase = {
-        collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, updateDoc, writeBatch
+        collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, updateDoc, writeBatch,
+        signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword
     };
   </script>
 
@@ -46,6 +51,7 @@
       --danger: #ef4444;
       --success: #10b981;
       --warning: #f59e0b;
+      --info: #3b82f6;
       --sidebar-bg: #111827;
       --sidebar-ink: #d1d5db;
       --radius: 12px;
@@ -78,6 +84,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      -webkit-backdrop-filter: blur(10px);
       backdrop-filter: blur(10px);
       transition: opacity 0.3s ease;
     }
@@ -95,14 +102,8 @@
     }
     
     @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     .login-box h3 { margin: 0 0 0.5rem 0; font-size: 1.75rem; color: var(--ink); font-weight: 700; }
@@ -122,12 +123,19 @@
       font-weight: 600; transition: var(--transition);
     }
     
-    #login-button:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow); }
+    #login-button:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow); }
+    #login-button:disabled { background: var(--muted); cursor: not-allowed; }
     
     .login-error-message {
       margin-top: 1rem !important; color: var(--danger) !important; display: none;
       background: rgba(239, 68, 68, 0.1); padding: 0.75rem; border-radius: var(--radius);
     }
+
+    #recover-password-button {
+        background: none; border: none; color: var(--primary); font-size: 0.875rem;
+        cursor: pointer; margin-top: 1.5rem; padding: 0.5rem;
+    }
+    #recover-password-button:hover { text-decoration: underline; }
 
     .app-layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
     
@@ -171,7 +179,8 @@
     .grid { display: grid; gap: 1.75rem; }
     .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    
+    .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
     .card {
       background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
       padding: 1.75rem; box-shadow: var(--shadow); transition: var(--transition);
@@ -179,6 +188,10 @@
 
     .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
     .card h3 { margin: 0 0 1.25rem 0; font-size: 1.25rem; font-weight: 700; }
+    
+    .stat-card { text-align: center; padding: 1.5rem; }
+    .stat-card .stat-value { font-size: 2rem; font-weight: 800; color: var(--primary); margin-bottom: 0.25rem; }
+    .stat-card .stat-label { font-size: 0.9rem; color: var(--muted); font-weight: 500; }
     
     label { font-size: 0.875rem; font-weight: 500; color: var(--muted); display: block; margin-bottom: 0.5rem; }
     
@@ -197,7 +210,7 @@
     .btn {
       appearance: none; border: 1px solid transparent; padding: 0.75rem 1.25rem;
       border-radius: var(--radius); cursor: pointer; font-weight: 600; display: inline-flex;
-      align-items: center; gap: 0.5rem; transition: var(--transition); font-size: 0.875rem;
+      align-items: center; justify-content: center; gap: 0.5rem; transition: var(--transition); font-size: 0.875rem;
     }
     
     .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
@@ -217,26 +230,28 @@
     th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; }
     tbody tr:hover { background: var(--primary-light); }
     .right { text-align: right; }
-    .hr { height: 1px; background: var(--line); margin: 2rem 0; border: none; }
-    .mini { font-size: 0.85rem; color: var(--muted); }
     
-    .logo-preview {
-      width: 140px; height: 80px; max-width: 100%; max-height: 80px; object-fit: contain;
-      border: 2px dashed var(--line); border-radius: var(--radius); background: var(--bg); padding: 0.5rem; display: block;
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
     }
+    .badge-success { background-color: var(--success); color: white; }
+    .badge-warning { background-color: var(--warning); color: var(--ink); }
+    .badge-info { background-color: var(--info); color: white; }
+    .badge-danger { background-color: var(--danger); color: white; }
+    .badge-muted { background-color: var(--line); color: var(--muted); }
     
-    .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
-    .thumb { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: #fff; position: relative; }
-    .thumb img { width: 100%; height: 80px; object-fit: cover; display: block; }
-    
-    .thumb-remove {
-      position: absolute; top: 0.25rem; right: 0.25rem; background: rgba(239, 68, 68, 0.9);
-      color: white; border: none; border-radius: 50%; width: 1.5rem; height: 1.5rem;
-      display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem;
+    .table-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
     }
-    
-    .total-box { background: var(--primary-light); border-radius: var(--radius); padding: 1.5rem; }
-    
+
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(17, 24, 39, 0.6); z-index: 100;
       display: none; align-items: center; justify-content: center;
@@ -248,13 +263,12 @@
       max-width: 550px; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto;
       animation: slideUp 0.4s ease;
     }
-    
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
     .modal-header h3 { margin: 0; font-size: 1.5rem; font-weight: 700; }
-    
+
     .toast {
       position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--accent); color: #fff;
-      padding: 1rem 1.5rem; border-radius: var(--radius); z-index: 101; font-weight: 500;
+      padding: 1rem 1.5rem; border-radius: var(--radius); z-index: 300; font-weight: 500;
       opacity: 0; transform: translateY(20px); transition: var(--transition);
       box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.75rem;
     }
@@ -265,14 +279,20 @@
     .toast.warning { background: var(--warning); }
     
     footer { text-align: center; padding: 0.75rem; background: var(--bg); font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); grid-column: 1 / 3; }
-    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.75rem; }
-    .password-card { margin-top: 1.75rem; }
-
-    .product-adder-grid {
-        display: grid;
-        grid-template-columns: 1fr 80px 120px;
-        gap: 8px;
+    .hr { height: 1px; background: var(--line); margin: 2rem 0; border: none; }
+    .mini { font-size: 0.85rem; color: var(--muted); }
+    .total-box { background: var(--primary-light); border-radius: var(--radius); padding: 1.5rem; }
+    .product-adder-grid { display: grid; grid-template-columns: 1fr 80px 120px; gap: 8px; }
+    .logo-preview {
+      width: 140px; height: 80px; max-width: 100%; max-height: 80px; object-fit: contain;
+      border: 2px dashed var(--line); border-radius: var(--radius); background: var(--bg); padding: 0.5rem; display: block;
     }
+    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.75rem; }
+    .search-box { position: relative; max-width: 250px; }
+    .search-box input { padding-left: 2.5rem; }
+    .search-box svg { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1.25rem; height: 1.25rem; color: var(--muted); }
+    .confirm-modal { text-align: center; }
+    .confirm-modal .btn { min-width: 100px; margin: 0 0.5rem; }
     
     .mobile-menu-btn {
       display: none;
@@ -287,161 +307,26 @@
       padding: 0.75rem;
       cursor: pointer;
     }
-    
-    .search-box {
-      position: relative;
-      max-width: 250px;
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 80;
     }
-    
-    .search-box input {
-      padding-left: 2.5rem;
-    }
-    
-    .search-box svg {
-      position: absolute;
-      left: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 1.25rem;
-      height: 1.25rem;
-      color: var(--muted);
-    }
-    
-    .confirm-modal {
-      text-align: center;
-    }
-    
-    .confirm-modal .btn {
-      min-width: 100px;
-      margin: 0 0.5rem;
-    }
-    
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.5rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    
-    .badge.success {
-      background-color: var(--success);
-      color: white;
-    }
-    
-    .badge.warning {
-      background-color: var(--warning);
-      color: white;
-    }
-    
-    .badge.danger {
-      background-color: var(--danger);
-      color: white;
-    }
-    
-    .status-indicator {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 0.5rem;
-    }
-    
-    .status-indicator.active {
-      background-color: var(--success);
-    }
-    
-    .status-indicator.inactive {
-      background-color: var(--muted);
-    }
-    
+    .sidebar-overlay.active { display: block; }
+
+
     @media (max-width: 1024px) {
       .app-layout { grid-template-columns: 1fr; }
       .sidebar { 
-        position: fixed; 
-        left: -260px; 
-        transition: left 0.3s ease; 
-        z-index: 90; 
-        width: 260px;
-        height: 100vh;
+        position: fixed; left: -260px; transition: left 0.3s ease; 
+        z-index: 90; width: 260px; height: 100vh;
       }
-      .sidebar.active { left: 0; }
+      .sidebar.active { left: 0; box-shadow: var(--shadow-lg); }
       .main-content { margin-left: 0; width: 100%; }
-      footer { grid-column: 1 / 2; position: static; }
-      .cols-3, .cols-2, .row { grid-template-columns: 1fr; }
-      .toolbar { flex-direction: column; align-items: stretch; }
-      .page-header .toolbar { flex-direction: row; flex-wrap: wrap; }
-      
-      .mobile-menu-btn {
-        display: block;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .main-content { padding: 1rem; }
-      
-      .page-header { 
-        flex-direction: column; 
-        align-items: flex-start; 
-        margin-bottom: 1.5rem;
-      }
-      
-      .page-header h2 {
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
-      }
-      
-      .page-header .toolbar { 
-        flex-direction: column; 
-        align-items: stretch; 
-        width: 100%;
-      }
-      
-      .toolbar {
-        flex-direction: column;
-        width: 100%;
-      }
-      
-      .toolbar .btn {
-        width: 100%;
-        justify-content: center;
-      }
-      
-      .product-adder-grid { 
-        grid-template-columns: 1fr; 
-      }
-      
-      .card {
-        padding: 1.25rem;
-      }
-      
-      table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-      }
-      
-      .search-box {
-        max-width: 100%;
-        width: 100%;
-      }
-    }
-    
-    @media (max-width: 640px) {
-      .main-content { padding: 1rem; }
-      
-      .grid-cols-3 {
-        grid-template-columns: 1fr;
-      }
-      
-      .modal-box {
-        padding: 1.5rem;
-        width: 95%;
-      }
-      
-      .login-box {
-        padding: 1.5rem;
-      }
+      .cols-3, .cols-2, .cols-4, .row { grid-template-columns: 1fr; }
+      .mobile-menu-btn { display: block; }
     }
     
     @media (prefers-color-scheme: dark) {
@@ -451,21 +336,9 @@
       }
       input, select, textarea { background: #0f172a; color: var(--ink); border-color: var(--line); }
       input:focus, select:focus, textarea:focus { background: var(--card); }
-      .total-box { background: #0f172a; border: 1px solid var(--line); }
       #login-wall { background-color: rgba(15, 23, 42, 0.8); }
       .login-box { background: rgba(30, 41, 59, 0.8); border-color: rgba(51, 65, 85, 0.9); }
-    }
-    
-    @media print {
-      body { background: #fff; font-size: 10pt; }
-      .app-layout, .app-layout > * { display: block !important; }
-      .sidebar, footer, .main-content .page-header, .toolbar, #page_factura > .card > div:first-child, #page_cotizacion > .card > div:first-child, .modal-overlay { display: none !important; }
-      .main-content { padding: 0; margin: 0; width: 100%; }
-      .card { box-shadow: none; border: none; padding: 0; }
-      .page { display: none !important; }
-      .page.printing { display: block !important; visibility: visible; position: absolute; top: 0; left: 0; width: 100%; }
-      .btn { display: none !important; }
-      input, select, textarea { border: 1px solid transparent !important; background: transparent !important; }
+      .total-box { background: #0f172a; border: 1px solid var(--line); }
     }
   </style>
 </head>
@@ -474,14 +347,17 @@
   <button class="mobile-menu-btn" id="mobileMenuButton">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
   </button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
   <div id="login-wall">
     <div class="login-box">
       <h3>Iniciar Sesión</h3>
-      <p>Ingresa la contraseña para acceder al facturador.</p>
-      <input type="password" id="login-password" class="login-input" placeholder="Contraseña" />
+      <p>Ingresa tus credenciales para acceder al facturador.</p>
+      <input type="email" id="login-email" class="login-input" placeholder="Correo Electrónico" required />
+      <input type="password" id="login-password" class="login-input" placeholder="Contraseña" required />
       <button id="login-button">Entrar</button>
-      <p id="login-error" class="login-error-message">Contraseña incorrecta.</p>
+      <p id="login-error" class="login-error-message">Credenciales incorrectas.</p>
+      <button id="recover-password-button">¿Olvidaste tu contraseña?</button>
     </div>
   </div>
 
@@ -489,20 +365,22 @@
     <aside class="sidebar">
         <h1>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1V21c0 .6.4 1 1 1h12c.6 0 1-.4 1-1V6.5L15.5 2z"></path><path d="M15 2v5h5"></path><path d="M10 16s-1-2-3-2-3 2-3 2"></path><path d="M10 12s-1-2-3-2-3 2-3 2"></path><path d="M18 16s-1-2-3-2-3 2-3 2"></path><path d="M18 12s-1-2-3-2-3 2-3 2"></path></svg>
-            <span>Facturador Pro</span>
+            <span>Facturador Pro+</span>
         </h1>
    
         <nav class="sidebar-nav">
-            <a href="#factura" class="nav-link active">
+            <a href="#dashboard" class="nav-link active">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="#factura" class="nav-link">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 <span>Nueva Factura</span>
             </a>
- 
             <a href="#cotizacion" class="nav-link">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 <span>Nueva Cotización</span>
             </a>
-
            <a href="#historial" class="nav-link">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
                 <span>Historial</span>
@@ -530,7 +408,47 @@
     </aside>
 
     <main class="main-content">
-      <section id="page_factura" class="page active">
+      <section id="page_dashboard" class="page active">
+        <div class="page-header">
+          <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            <span>Dashboard</span>
+          </h2>
+        </div>
+        <div class="grid cols-4" id="dashboard-stats">
+          <div class="card stat-card">
+            <div id="stat-total-paid" class="stat-value">$0</div>
+            <div class="stat-label">Total Cobrado</div>
+          </div>
+          <div class="card stat-card">
+            <div id="stat-total-pending" class="stat-value">$0</div>
+            <div class="stat-label">Pendiente de Cobro</div>
+          </div>
+          <div class="card stat-card">
+            <div id="stat-total-clients" class="stat-value">0</div>
+            <div class="stat-label">Clientes Activos</div>
+          </div>
+          <div class="card stat-card">
+            <div id="stat-total-invoices" class="stat-value">0</div>
+            <div class="stat-label">Facturas Emitidas</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 2rem;">
+            <h3>Actividad Reciente</h3>
+            <table id="tablaActividadReciente">
+              <thead>
+                <tr>
+                    <th># Documento</th><th>Tipo</th><th>Cliente</th><th class="right">Total</th><th class="right">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" style="text-align:center; color: var(--muted);">Cargando actividad...</td></tr>
+              </tbody>
+            </table>
+        </div>
+      </section>
+
+      <section id="page_factura" class="page">
         <div class="page-header">
           <h2>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -756,7 +674,9 @@
             <h3>Facturas</h3>
               <table id="tablaFacturas">
               <thead>
-                  <tr><th># Factura</th><th>Fecha</th><th>Cliente</th><th class="right">Total</th><th style="width:220px;" class="right">Acciones</th></tr>
+                  <tr>
+                    <th># Factura</th><th>Fecha</th><th>Cliente</th><th class="right">Total</th><th>Estado</th><th class="right" style="width:300px;">Acciones</th>
+                </tr>
               </thead>
               <tbody></tbody>
           </table>
@@ -765,14 +685,16 @@
             <h3>Cotizaciones</h3>
               <table id="tablaCotizaciones">
               <thead>
-                  <tr><th># Cotización</th><th>Fecha</th><th>Cliente</th><th class="right">Total</th><th style="width:220px;" class="right">Acciones</th></tr>
+                  <tr>
+                    <th># Cotización</th><th>Fecha</th><th>Cliente</th><th class="right">Total</th><th class="right" style="width:280px;">Acciones</th>
+                  </tr>
               </thead>
               <tbody></tbody>
           </table>
         </div>
     </section>
 
-      <section id="page_clientes" class="page">
+    <section id="page_clientes" class="page">
           <div class="page-header">
               <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -789,7 +711,7 @@
           <div class="card">
             <table id="tablaClientes">
                 <thead>
-                    <tr><th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Correo</th><th style="width:100px;">Acciones</th></tr>
+                    <tr><th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Correo</th><th style="width:150px;" class="right">Acciones</th></tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -813,7 +735,7 @@
         <div class="card">
             <table id="tablaProductos">
                 <thead>
-                   <tr><th>Código</th><th>Nombre</th><th>Valor Unitario</th><th>Descripción (viñetas)</th><th style="width:100px;">Acciones</th></tr>
+                   <tr><th>Código</th><th>Nombre</th><th>Valor Unitario</th><th>Descripción (viñetas)</th><th style="width:150px;" class="right">Acciones</th></tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -855,8 +777,9 @@
                 <div style="margin-top:16px;">
                     <label>Logo (opcional)</label>
                     <div style="display:flex; align-items:flex-end; gap:16px;">
-                        <img id="logoPreview" class="logo-preview" alt="logo preview" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTQwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iODAiIGZpbGw9IiNGM0Y0RjYiIHJ4PSI4Ii8+PHN2ZyB4PSI1MCIgeT0iMjUiIHdpZHRoPSI0MCIgaGVpZHRoPSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Q0EwQUIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTUgM0g2YTIgMiAwIDAgMC0yIDJ2MTRhMiAy IDAgMCAwIDIgMmgxMmEyIDIgMCAwIDAgMi0yVjlabTAgNGg0YTIgMiAwIDAgMSAyIDJ2MGEyIDIgMCAwIDEtMiAyaC00YTIgMiAwIDAgMS0yLTJ2MGEyIDIgMCAwIDEgMi0yeiIvPjwvc3ZnPjx0ZXh0IHg9IjcwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBMEFCIj5Mb2dvIGRlIGxhIGVtcHJlc2E8L3RleHQ+PC9zdmc+" />
-                        <input type="file" id="em_logo" accept="image/*" />
+                        <img id="logoPreview" class="logo-preview" alt="logo preview" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTQwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iODAiIGZpbGw9IiNGM0Y0RjYiIHJ4PSI4Ii8+PHN2ZyB4PSI1MCIgeT0iMjUiIHdpZHRoPSI0MCIgaGVpZHRoPSIzMCIgdmlld0JveD0iMCAwIDI0IDI4IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Q0EwQUIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTUgM0g2YTIgMiAwIDAgMC0yIDJ2MTRhMiAyIDAgMCAwIDIgMmgxMmEyIDIgMCAwIDAgMi0yVjlabTAgNGg0YTIgMiAwIDAgMSAyIDJ2MGEyIDIgMCAwIDEtMiAyaC00YTIgMiAwIDAgMS0yLTJ2MGEyIDIgMCAwIDEgMi0yeiIvPjwvc3ZnPjx0ZXh0IHg9IjcwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBMEFCIj5Mb2dvIGRlIGxhIGVtcHJlc2E8L3RleHQ+PC9zdmc+" />
+                        <input type="file" id="em_logo" accept="image/*" style="display:none;" />
+                        <button class="btn secondary" onclick="$('#em_logo').click()">Subir Logo</button>
                     </div>
                 </div>
                   <div class="toolbar" style="margin-top:24px;">
@@ -866,34 +789,36 @@
             
             <div class="card">
                 <h3>Base de Datos Local</h3>
-                <p class="mini">Importa datos desde un archivo Excel a tu base de datos en la nube.</p>
+                <p class="mini">Importa y exporta datos desde y hacia archivos Excel.</p>
                 <div class="toolbar" style="flex-direction:column; align-items:stretch; gap:12px; margin-top:20px;">
                     <button class="btn ghost" id="btnImportExcel">📥 Importar desde Excel</button>
                     <button class="btn secondary" id="btnPlantilla">📄 Descargar Plantilla</button>
                 </div>
                 <input type="file" id="inputExcel" accept=".xlsx,.xls" style="display:none" />
             </div>
-            
-            <div class="card password-card">
-                <h3>Seguridad</h3>
-                <p class="mini">Cambia la contraseña de acceso a la aplicación. El cambio se guardará en la nube.</p>
+
+            <div class="card">
+                <h3>Seguridad de la Cuenta</h3>
+                <p class="mini">Cambia la contraseña de acceso a tu cuenta.</p>
                 <div style="margin-top:16px;">
                     <label>Nueva Contraseña</label>
-                    <input type="password" id="new-password" class="login-input" placeholder="Nueva contraseña" />
+                    <input type="password" id="new-password" placeholder="Mínimo 6 caracteres" />
                 </div>
                 <div style="margin-top:16px;">
-                    <label>Confirmar Contraseña</label>
-                    <input type="password" id="confirm-password" class="login-input" placeholder="Confirmar contraseña" />
+                    <label>Confirmar Nueva Contraseña</label>
+                    <input type="password" id="confirm-password" placeholder="Repite la contraseña" />
                 </div>
                 <div class="toolbar" style="margin-top:24px;">
                     <button class="btn primary" id="btnCambiarPassword">Cambiar Contraseña</button>
                 </div>
             </div>
+
         </div>
       </section>
+
     </main>
   </div>
-
+  
   <div id="modalCliente" class="modal-overlay">
       <div class="modal-box">
           <div class="modal-header">
@@ -948,101 +873,158 @@
           </div>
       </div>
   </div>
-  
-  <div id="toast" class="toast"></div>
 
+  <div id="toast" class="toast"></div>
+  <div id="qrcode-container" style="display: none;"></div>
   <footer>Desarrollado por Chocó Creativo 🖤 - Conectado a Firebase</footer>
 
-  <div id="qrcode-container" style="display: none;"></div>
-
   <script type="module">
-    // ===================================
-    // SCRIPT PRINCIPAL DE LA APLICACIÓN
-    // ===================================
-
     const $ = (q) => document.querySelector(q);
     const $$ = (q) => Array.from(document.querySelectorAll(q));
     
-    const { collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, updateDoc, writeBatch } = window.firebase;
+    const { collection, getDocs, doc, getDoc, addDoc, setDoc, deleteDoc, updateDoc, writeBatch, sendPasswordResetEmail, updatePassword } = window.firebase;
     const db = window.db;
+    const auth = window.auth;
 
     const DEFAULT_DB = {
       Emisor: { nombre: '', nit: '', direccion: '', telefono: '', correo: '', logo: '' },
       Clientes: [], Productos: [], Facturas: [], Cotizaciones: [],
-      Config: { passwordHash: '' }
+      Config: {}
     };
     let DB = structuredClone(DEFAULT_DB);
     let FACT = {};
     let COTIZACION = {};
     let confirmacionCallback = null;
 
-    // ========================
-    // Lógica Principal de Datos
-    // ========================
     async function loadDB() {
         showToast('Cargando datos desde la nube...', 'warning');
         try {
-            const [clientesSnap, productosSnap, facturasSnap, cotizacionesSnap, emisorDoc, appConfigDoc] = await Promise.all([
+            const [clientesSnap, productosSnap, facturasSnap, cotizacionesSnap, emisorDoc] = await Promise.all([
                 getDocs(collection(db, "Clientes")),
                 getDocs(collection(db, "Productos")),
                 getDocs(collection(db, "Facturas")),
                 getDocs(collection(db, "Cotizaciones")),
                 getDoc(doc(db, "Configuracion", "Emisor")),
-                getDoc(doc(db, "Configuracion", "App"))
             ]);
 
             DB.Clientes = clientesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             DB.Productos = productosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             DB.Facturas = facturasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             DB.Cotizaciones = cotizacionesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
             if(emisorDoc.exists()) DB.Emisor = emisorDoc.data();
-            if(appConfigDoc.exists()) DB.Config = { ...DB.Config, ...appConfigDoc.data() };
             
             paintAll();
             setupSearch();
             showToast('Datos cargados correctamente ✅', 'success');
         } catch (e) {
             console.error("Error al cargar datos: ", e);
-            showToast('Error al cargar datos. Revisa la conexión y las reglas de Firestore.', 'error');
+            showToast('Error al cargar datos. Revisa la conexión.', 'error');
             throw e; 
         }
     }
 
-    // ========================
-    // Autenticación
-    // ========================
-    function hashPassword(password) { return CryptoJS.SHA256(password).toString(); }
+    async function intentarLogin() {
+        const email = $('#login-email').value;
+        const password = $('#login-password').value;
+        const loginButton = $('#login-button');
+        const loginError = $('#login-error');
 
-    async function checkPassword(password) {
-      if (!DB.Config.passwordHash) {
-        const defaultHash = "86f38c590a3423c0a18c12c1652e05fb25261774271b1ec10fcdc57315b8bc3c";
+        loginError.style.display = 'none';
+
+        if (!email || !password) {
+            loginError.textContent = 'Por favor, ingresa correo y contraseña.';
+            loginError.style.display = 'block';
+            return;
+        }
+
+        loginButton.disabled = true;
+        loginButton.textContent = 'Verificando...';
+        
         try {
-            await setDoc(doc(db, "Configuracion", "App"), { passwordHash: defaultHash }, { merge: true });
-            DB.Config.passwordHash = defaultHash;
-        } catch(e) { console.error("Could not set default password hash", e); }
-        return hashPassword(password) === defaultHash;
-      }
-      return hashPassword(password) === DB.Config.passwordHash;
+            await firebase.signInWithEmailAndPassword(auth, email, password);
+            $('#login-wall').style.opacity = 0;
+            setTimeout(() => $('#login-wall').style.display = 'none', 300);
+            await loadDB();
+        } catch (error) {
+            switch (error.code) {
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    loginError.textContent = 'El correo o la contraseña son incorrectos.';
+                    break;
+                case 'auth/too-many-requests':
+                    loginError.textContent = 'Acceso bloqueado temporalmente. Intenta más tarde.';
+                    break;
+                default:
+                    loginError.textContent = 'Ocurrió un error al iniciar sesión.';
+                    console.error("Error de autenticación:", error);
+            }
+            loginError.style.display = 'block';
+        } finally {
+            loginButton.disabled = false;
+            loginButton.textContent = 'Entrar';
+        }
     }
 
-    async function changePassword(newPassword) {
-      if (newPassword.length < 4) {
-        showToast('La contraseña debe tener al menos 4 caracteres', 'error');
-        return;
-      }
-      const newHash = hashPassword(newPassword);
-      try {
-        await setDoc(doc(db, "Configuracion", "App"), { passwordHash: newHash }, { merge: true });
-        DB.Config.passwordHash = newHash;
-        showToast('Contraseña actualizada en la nube', 'success');
-      } catch (e) { showToast('Error al cambiar la contraseña', 'error'); }
+    async function recuperarContrasena() {
+        const email = $('#login-email').value;
+        const loginError = $('#login-error');
+
+        if (!email) {
+            loginError.textContent = 'Ingresa tu correo para poder enviar el enlace.';
+            loginError.style.display = 'block';
+            return;
+        }
+
+        showToast('Enviando correo de recuperación...', 'info');
+        loginError.style.display = 'none';
+        
+        try {
+            await sendPasswordResetEmail(auth, email);
+            showToast('✅ Correo enviado. Revisa tu bandeja de entrada (y spam).', 'success');
+        } catch (error) {
+            console.error("Error al enviar correo:", error);
+            if (error.code === 'auth/user-not-found') {
+                loginError.textContent = 'No se encontró un usuario con ese correo.';
+                loginError.style.display = 'block';
+            } else {
+                loginError.textContent = 'Ocurrió un error al enviar el correo.';
+                loginError.style.display = 'block';
+            }
+        }
     }
-    
-    // ========================
-    // RENDERIZADO DE UI
-    // ========================
+
+    async function cambiarContrasena() {
+        const newPassword = $('#new-password').value;
+        const confirmPassword = $('#confirm-password').value;
+        const user = auth.currentUser;
+
+        if (!user) {
+            showToast('No has iniciado sesión.', 'error');
+            return;
+        }
+        if (newPassword.length < 6) {
+            showToast('La nueva contraseña debe tener al menos 6 caracteres.', 'error');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            showToast('Las contraseñas no coinciden.', 'error');
+            return;
+        }
+
+        try {
+            await updatePassword(user, newPassword);
+            showToast('Contraseña actualizada correctamente.', 'success');
+            $('#new-password').value = '';
+            $('#confirm-password').value = '';
+        } catch (error) {
+            console.error("Error al cambiar la contraseña:", error);
+            showToast('Error al actualizar. Es posible que necesites volver a iniciar sesión.', 'error');
+        }
+    }
+
     function paintAll() {
+        paintDashboard();
         paintEmisor();
         refreshClientesSelect();
         updatePreviewCliente();
@@ -1053,6 +1035,44 @@
         paintTablaFacturas();
         paintTablaCotizaciones();
     }
+    
+    function paintDashboard() {
+      const paidInvoices = DB.Facturas.filter(f => f.status === 'Pagada');
+      const pendingInvoices = DB.Facturas.filter(f => f.status !== 'Pagada' && f.status !== undefined);
+      
+      const totalPaid = paidInvoices.reduce((sum, inv) => sum + calcularTotal(inv), 0);
+      const totalPending = pendingInvoices.reduce((sum, inv) => sum + calcularTotal(inv), 0);
+      
+      $('#stat-total-paid').textContent = currency(totalPaid);
+      $('#stat-total-pending').textContent = currency(totalPending);
+      $('#stat-total-clients').textContent = DB.Clientes.length;
+      $('#stat-total-invoices').textContent = DB.Facturas.length;
+      
+      const recentActivity = [...DB.Facturas, ...DB.Cotizaciones]
+          .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+          .slice(0, 5);
+      
+      const activityTbody = $('#tablaActividadReciente tbody');
+      if (recentActivity.length === 0) {
+          activityTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--muted);">No hay actividad reciente.</td></tr>';
+          return;
+      }
+      activityTbody.innerHTML = recentActivity.map(doc => {
+          const isInvoice = 'status' in doc;
+          const type = isInvoice ? 'Factura' : 'Cotización';
+          const cliente = DB.Clientes.find(c => c.nit === doc.clienteNit)?.nombre || 'N/A';
+          return `
+              <tr>
+                  <td>${doc.numero}</td>
+                  <td>${type} <span style="opacity: 0.5;">${isInvoice ? getStatusBadge(doc.status) : ''}</span></td>
+                  <td>${cliente}</td>
+                  <td class="right">${currency(calcularTotal(doc))}</td>
+                  <td class="right">${doc.fecha}</td>
+              </tr>
+          `;
+      }).join('');
+    }
+    
     function paintEmisor(){
       $('#em_nombre').value = DB.Emisor.nombre || '';
       $('#em_nit').value = DB.Emisor.nit || '';
@@ -1083,34 +1103,56 @@
         $('#tablaClientes tbody').innerHTML = DB.Clientes.map(c => `
             <tr>
                 <td>${c.nombre}</td><td>${c.nit}</td><td>${c.telefono}</td><td>${c.correo}</td>
-                <td><div class="toolbar"><button class="btn ghost btn-sm" data-action="edit" data-id="${c.id}">Editar</button><button class="btn danger btn-sm" data-action="delete" data-id="${c.id}">Borrar</button></div></td>
+                <td class="right"><div class="table-actions"><button class="btn ghost btn-sm" data-action="edit" data-id="${c.id}">Editar</button><button class="btn danger btn-sm" data-action="delete" data-id="${c.id}">Borrar</button></div></td>
             </tr>`).join('');
     }
     function paintTablaProductos() {
         $('#tablaProductos tbody').innerHTML = DB.Productos.map(p => `
             <tr>
                 <td>${p.codigo}</td><td>${p.nombre}</td><td>${currency(p.valor)}</td><td style="white-space:pre-line">${(p.bullets||[]).map(b => `• ${b}`).join('\n')}</td>
-                <td><div class="toolbar"><button class="btn ghost btn-sm" data-action="edit" data-id="${p.id}">Editar</button><button class="btn danger btn-sm" data-action="delete" data-id="${p.id}">Borrar</button></div></td>
+                <td class="right"><div class="table-actions"><button class="btn ghost btn-sm" data-action="edit" data-id="${p.id}">Editar</button><button class="btn danger btn-sm" data-action="delete" data-id="${p.id}">Borrar</button></div></td>
             </tr>`).join('');
     }
+
     function paintTablaFacturas() {
         $('#tablaFacturas tbody').innerHTML = [...DB.Facturas].sort((a,b) => b.numero.localeCompare(a.numero)).map(f => `
             <tr>
                 <td>${f.numero}</td><td>${f.fecha}</td><td>${DB.Clientes.find(c=>c.nit===f.clienteNit)?.nombre||'N/A'}</td><td class="right">${currency(calcularTotal(f))}</td>
-                <td class="right"><div class="toolbar" style="justify-content:flex-end"><button class="btn primary btn-sm" data-action="download" data-id="${f.id}">PDF</button><button class="btn danger btn-sm" data-action="delete" data-id="${f.id}">Borrar</button></div></td>
+                <td>${getStatusBadge(f.status)}</td>
+                <td class="right">
+                    <div class="table-actions">
+                        <button class="btn ghost btn-sm" data-action="set-status" data-id="${f.id}" data-status="Pagada" title="Marcar como Pagada">✔️ Pagada</button>
+                        <button class="btn ghost btn-sm" data-action="set-status" data-id="${f.id}" data-status="Enviada" title="Marcar como Enviada">✉️ Enviada</button>
+                        <button class="btn primary btn-sm" data-action="download" data-id="${f.id}">PDF</button>
+                        <button class="btn danger btn-sm" data-action="delete" data-id="${f.id}">Borrar</button>
+                    </div>
+                </td>
             </tr>`).join('');
     }
+
     function paintTablaCotizaciones() {
         $('#tablaCotizaciones tbody').innerHTML = [...DB.Cotizaciones].sort((a,b) => b.numero.localeCompare(a.numero)).map(c => `
             <tr>
                 <td>${c.numero}</td><td>${c.fecha}</td><td>${DB.Clientes.find(cl=>cl.nit===c.clienteNit)?.nombre||'N/A'}</td><td class="right">${currency(calcularTotal(c))}</td>
-                <td class="right"><div class="toolbar" style="justify-content:flex-end"><button class="btn primary btn-sm" data-action="download-quote" data-id="${c.id}">PDF</button><button class="btn danger btn-sm" data-action="delete-quote" data-id="${c.id}">Borrar</button></div></td>
+                <td class="right">
+                    <div class="table-actions">
+                        <button class="btn success btn-sm" data-action="convert-to-invoice" data-id="${c.id}">Crear Factura</button>
+                        <button class="btn primary btn-sm" data-action="download-quote" data-id="${c.id}">PDF</button>
+                        <button class="btn danger btn-sm" data-action="delete-quote" data-id="${c.id}">Borrar</button>
+                    </div>
+                </td>
             </tr>`).join('');
     }
 
-    // ========================
-    // Lógica de Formularios
-    // ========================
+    function getStatusBadge(status) {
+        switch (status) {
+            case 'Pagada': return '<span class="badge badge-success">Pagada</span>';
+            case 'Enviada': return '<span class="badge badge-info">Enviada</span>';
+            case 'Vencida': return '<span class="badge badge-danger">Vencida</span>';
+            default: return `<span class="badge badge-muted">${status || 'Borrador'}</span>`;
+        }
+    }
+
     function setupForms() {
       resetForm('factura');
       resetForm('cotizacion');
@@ -1167,7 +1209,7 @@
         (type === 'factura' ? FACT : COTIZACION).items.splice(index, 1);
         paintItems(type);
     }
-    window.removeItem = removeItem; // Expose to global scope for onclick attribute
+    window.removeItem = removeItem;
     function paintItems(type) {
         const isFactura = type === 'factura';
         const D = isFactura ? FACT : COTIZACION;
@@ -1191,10 +1233,10 @@
             descuentoValor: Number($(`#${p}_desc_valor`).value) || 0,
         });
 
-        const total = calcularTotal(D);
         const subtotal = (D.items || []).reduce((a,b)=> a + (b.valor * b.cantidad), 0);
         const descuento = D.descuentoTipo === 'porcentaje' ? subtotal * (D.descuentoValor / 100) : D.descuentoValor;
         const iva = (subtotal - descuento) * (D.iva / 100);
+        const total = subtotal - descuento + iva;
 
         $(`#subtotal${isFactura ? '' : 'Cotizacion'}`).textContent = currency(subtotal);
         $(`#descuento${isFactura ? '' : 'Cotizacion'}`).textContent = `- ${currency(descuento)}`;
@@ -1202,30 +1244,29 @@
         $(`#total${isFactura ? '' : 'Cotizacion'}`).textContent = currency(total);
     }
     
-    // ========================
-    // CRUD y Event Listeners
-    // ========================
     function setupEventListeners() {
-        // Navegación
+        const sidebar = $('.sidebar');
+        const overlay = $('#sidebarOverlay');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        $('#mobileMenuButton').onclick = toggleMenu;
+        overlay.onclick = toggleMenu;
+
         $$('.nav-link').forEach(link => {
             link.onclick = (e) => {
                 e.preventDefault();
                 const targetId = link.getAttribute('href').substring(1);
-                if (targetId) {
-                    $$('.page').forEach(p => p.classList.remove('active'));
-                    $(`#page_${targetId}`).classList.add('active');
-                    $$('.nav-link').forEach(l => l.classList.remove('active'));
-                    link.classList.add('active');
+                if (targetId) navigateTo(targetId);
+                if (sidebar.classList.contains('active')) {
+                    toggleMenu();
                 }
             }
         });
 
-        // Menú móvil
-        $('#mobileMenuButton').onclick = () => {
-            $('.sidebar').classList.toggle('active');
-        };
-
-        // Formularios
         $('#btnNuevaFactura').onclick = () => resetForm('factura');
         $('#btnNuevaCotizacion').onclick = () => resetForm('cotizacion');
         $('#btnLimpiarFactura').onclick = () => resetForm('factura');
@@ -1237,7 +1278,6 @@
         ['#fc_iva', '#fc_notas', '#fc_fecha', '#fc_desc_tipo', '#fc_desc_valor'].forEach(id => $(id).addEventListener('input', () => recalcTotals('factura')));
         ['#ct_iva', '#ct_notas', '#ct_fecha', '#ct_desc_tipo', '#ct_desc_valor'].forEach(id => $(id).addEventListener('input', () => recalcTotals('cotizacion')));
         
-        // Clientes
         $('#btnNuevoCliente').onclick = () => {
             $('#modalClienteTitle').textContent = 'Agregar Cliente';
             $('#cl_edit_id').value = '';
@@ -1266,7 +1306,7 @@
             } else if (action === 'delete') {
                 showConfirmacion(`¿Eliminar a ${cliente.nombre}?`, async () => {
                     await deleteDoc(doc(db, "Clientes", id));
-                    loadDB();
+                    await loadDB();
                 });
             }
         };
@@ -1279,17 +1319,16 @@
             const id = $('#cl_edit_id').value;
             try {
                 if (id) {
-                    await setDoc(doc(db, "Clientes", id), data);
+                    await setDoc(doc(db, "Clientes", id), data, { merge: true });
                 } else {
                     if(DB.Clientes.some(x => x.nit === data.nit)) return showToast('Ese NIT ya existe', 'error');
                     await addDoc(collection(db, "Clientes"), data);
                 }
                 $('#modalCliente').style.display='none';
-                loadDB();
+                await loadDB();
             } catch (e) { console.error(e); showToast('Error al guardar cliente', 'error'); }
         };
 
-        // Productos
         $('#btnNuevoProducto').onclick = () => {
             $('#modalProductoTitle').textContent = 'Agregar Producto';
             $('#pr_edit_id').value = '';
@@ -1317,7 +1356,7 @@
             } else if (action === 'delete') {
                 showConfirmacion(`¿Eliminar ${producto.nombre}?`, async () => {
                     await deleteDoc(doc(db, "Productos", id));
-                    loadDB();
+                    await loadDB();
                 });
             }
         };
@@ -1331,31 +1370,27 @@
             const id = $('#pr_edit_id').value;
             try {
                 if (id) {
-                    await setDoc(doc(db, "Productos", id), data);
+                    await setDoc(doc(db, "Productos", id), data, { merge: true });
                 } else {
                     if(DB.Productos.some(x => x.codigo === data.codigo)) return showToast('Ese código ya existe', 'error');
                     await addDoc(collection(db, "Productos"), data);
                 }
                 $('#modalProducto').style.display='none';
-                loadDB();
+                await loadDB();
             } catch (e) { console.error(e); showToast('Error al guardar producto', 'error'); }
         };
 
-        // Guardar Factura / Cotización
         $('#btnGuardarFactura').onclick = () => saveDocument('factura');
         $('#btnGuardarCotizacion').onclick = () => saveDocument('cotizacion');
         
-        // Imprimir y PDF
         $('#btnPrintInvoice').onclick = () => handlePrintOrPdf('factura', true);
         $('#btnPrintQuote').onclick = () => handlePrintOrPdf('cotizacion', true);
         $('#btnEnviarFactura').onclick = () => handleEmail('factura');
         $('#btnEnviarCotizacion').onclick = () => handleEmail('cotizacion');
 
-        // Historial
         $('#tablaFacturas').onclick = (e) => handleHistoryActions(e, 'factura');
         $('#tablaCotizaciones').onclick = (e) => handleHistoryActions(e, 'cotizacion');
 
-        // Configuración
         $('#btnGuardarEmisor').onclick = async () => {
             const data = {
                 nombre: $('#em_nombre').value.trim(), nit: $('#em_nit').value.trim(),
@@ -1372,20 +1407,11 @@
             $('#logoPreview').src = DB.Emisor.logo;
             showToast('Logo listo. Pulsa "Guardar Emisor"', 'warning');
         };
-        $('#btnCambiarPassword').onclick = async () => {
-            const newPass = $('#new-password').value;
-            if (newPass !== $('#confirm-password').value) return showToast('Las contraseñas no coinciden', 'error');
-            await changePassword(newPass);
-            $('#new-password').value = '';
-            $('#confirm-password').value = '';
-        };
 
-        // Excel
         $('#btnPlantilla').onclick = downloadTemplateExcel;
         $('#btnImportExcel').onclick = () => $('#inputExcel').click();
         $('#inputExcel').onchange = importExcel;
 
-        // Confirmación modal
         $('#btnConfirmarAccion').onclick = () => {
             if (confirmacionCallback) {
                 confirmacionCallback();
@@ -1393,6 +1419,8 @@
                 confirmacionCallback = null;
             }
         };
+
+        $('#btnCambiarPassword').onclick = cambiarContrasena;
     }
 
     function showConfirmacion(mensaje, callback) {
@@ -1402,7 +1430,6 @@
     }
 
     function setupSearch() {
-        // Búsqueda en tiempo real
         $('#searchHistorial').addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
             filterTable('tablaFacturas', term);
@@ -1430,56 +1457,29 @@
         const isFactura = type === 'factura';
         const D = isFactura ? FACT : COTIZACION;
         const collectionName = isFactura ? 'Facturas' : 'Cotizaciones';
-
-        if(D.items.length === 0) return showToast('Agrega al menos un ítem', 'error');
+        let nit = isFactura ? $('#selCliente').value : $('#selClienteCotizacion').value;
+        if(D.items.length === 0 || !nit) return showToast('Agrega ítems y selecciona un cliente', 'error');
         
-        // Obtener el NIT del cliente correctamente
-        let nit;
+        recalcTotals(type);
+        const docData = { ...D, clienteNit: nit, items: D.items.map(({id, ...rest}) => rest) }; 
         if (isFactura) {
-            nit = $('#selCliente').value;
-        } else {
-            nit = $('#selClienteCotizacion').value;
+            docData.status = 'Enviada';
         }
-        
-        if(!nit) return showToast('Selecciona un cliente', 'error');
-        
-        recalcTotals(type); // Ensure data object is up to date before saving
-
-        const docData = { 
-            ...D, 
-            clienteNit: nit, 
-            items: D.items.map(({id, ...rest}) => rest) 
-        }; 
         
         try {
             const docRef = await addDoc(collection(db, collectionName), docData);
             showToast(`${isFactura ? 'Factura' : 'Cotización'} guardada`, 'success');
-            const newDoc = { id: docRef.id, ...docData };
-            if (isFactura) {
-                DB.Facturas.push(newDoc);
-                paintTablaFacturas();
-            } else {
-                DB.Cotizaciones.push(newDoc);
-                paintTablaCotizaciones();
-            }
+            await loadDB();
             
-            // Generar PDF después de guardar
-            try {
-                const cliente = DB.Clientes.find(c => c.nit === nit);
-                if (!cliente) {
-                    showToast('Cliente no encontrado para generar PDF', 'error');
-                    return;
-                }
-                await generarPDF(docData, cliente, isFactura ? 'FACTURA' : 'COTIZACIÓN', false);
-            } catch (pdfError) {
-                console.error("Error al generar PDF:", pdfError);
-                showToast('Documento guardado pero error al generar PDF: ' + pdfError.message, 'error');
-            }
+            const cliente = DB.Clientes.find(c => c.nit === nit);
+            if (!cliente) return showToast('Cliente no encontrado para generar PDF', 'error');
+            await generarPDF(docData, cliente, isFactura ? 'FACTURA' : 'COTIZACIÓN', false);
         } catch(e) { 
-            console.error("Error al guardar documento:", e);
+            console.error("Error al guardar:", e);
             showToast('Error al guardar: ' + e.message, 'error'); 
         }
     }
+    
     async function handleHistoryActions(event, type) {
         const btn = event.target.closest('button[data-id]');
         if (!btn) return;
@@ -1490,10 +1490,44 @@
         
         if (!docData) return;
 
+        if (action === 'set-status' && isFactura) {
+            const newStatus = btn.dataset.status;
+            try {
+                await updateDoc(doc(db, 'Facturas', id), { status: newStatus });
+                showToast(`Factura marcada como ${newStatus}`, 'success');
+                await loadDB();
+            } catch(e) { showToast('Error al actualizar estado', 'error'); }
+            return;
+        }
+
+        if (action === 'convert-to-invoice' && !isFactura) {
+            const quoteData = DB.Cotizaciones.find(q => q.id === id);
+            if (!quoteData) return showToast('Cotización no encontrada', 'error');
+            
+            resetForm('factura');
+            Object.assign(FACT, {
+                items: [...quoteData.items],
+                iva: quoteData.iva,
+                notas: `Basado en cotización: ${quoteData.numero}\n${quoteData.notas}`,
+                descuentoTipo: quoteData.descuentoTipo,
+                descuentoValor: quoteData.descuentoValor
+            });
+            $('#selCliente').value = quoteData.clienteNit;
+            $('#fc_iva').value = FACT.iva;
+            $('#fc_notas').value = FACT.notas;
+            $('#fc_desc_tipo').value = FACT.descuentoTipo;
+            $('#fc_desc_valor').value = FACT.descuentoValor;
+            updatePreviewCliente();
+            paintItems('factura');
+            navigateTo('factura');
+            showToast('Datos cargados. Revisa y guarda la nueva factura.', 'info');
+            return;
+        }
+
         if (action === 'delete') {
             showConfirmacion(`¿Eliminar ${isFactura ? 'factura' : 'cotización'} N° ${docData.numero}?`, async () => {
                 await deleteDoc(doc(db, isFactura ? 'Facturas' : 'Cotizaciones', id));
-                loadDB();
+                await loadDB();
             });
         } else if (action === 'download') {
             const cliente = DB.Clientes.find(c => c.nit === docData.clienteNit);
@@ -1507,9 +1541,6 @@
         }
     }
     
-    // ========================
-    // Lógica de PDF, Excel y Búsqueda
-    // ========================
     function numeroALetras(num) {
       const unidades = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
       const decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
@@ -1581,7 +1612,7 @@
                 if (count > 0) {
                     await batch.commit();
                     showToast(`${count} registros importados. Actualizando...`, 'success');
-                    loadDB();
+                    await loadDB();
                 } else {
                     showToast('No se encontraron nuevos registros para importar.', 'warning');
                 }
@@ -1597,14 +1628,7 @@
         const D = isFactura ? FACT : COTIZACION;
         if(D.items.length === 0) return showToast('Agrega al menos un ítem', 'error');
         
-        // Obtener el NIT del cliente correctamente
-        let nit;
-        if (isFactura) {
-            nit = $('#selCliente').value;
-        } else {
-            nit = $('#selClienteCotizacion').value;
-        }
-        
+        let nit = isFactura ? $('#selCliente').value : $('#selClienteCotizacion').value;
         if(!nit) return showToast('Selecciona un cliente', 'error');
         const cliente = DB.Clientes.find(c => c.nit === nit);
         if(!cliente) return showToast('Cliente no válido', 'error');
@@ -1614,22 +1638,14 @@
     function handleEmail(type) {
         const isFactura = type === 'factura';
         const D = isFactura ? FACT : COTIZACION;
-        
-        // Obtener el NIT del cliente correctamente
-        let nit;
-        if (isFactura) {
-            nit = $('#selCliente').value;
-        } else {
-            nit = $('#selClienteCotizacion').value;
-        }
-        
+        let nit = isFactura ? $('#selCliente').value : $('#selClienteCotizacion').value;
         if (!nit) return showToast('Selecciona un cliente primero.', 'error');
         
         const cliente = DB.Clientes.find(c => c.nit === nit);
         if (!cliente || !cliente.correo) return showToast('El cliente no tiene un correo electrónico guardado.', 'error');
 
-        const subject = `${isFactura ? 'Factura' : 'Cotización'} No. ${D.numero} de ${DB.Emisor.nombre}`;
-        const body = `Hola ${cliente.nombre},\n\nAdjunto encontrarás la ${isFactura ? 'factura' : 'cotización'} No. ${D.numero}.\n\nPor favor, descarga el PDF y adjúntalo a este correo antes de enviarlo.\n\nGracias,\n${DB.Emisor.nombre}`;
+        const subject = `Envío de ${isFactura ? 'Factura' : 'Cotización'} - ${D.numero}`;
+        const body = `Estimado(a) ${cliente.nombre},\n\nAdjuntamos la ${isFactura ? 'factura' : 'cotización'} N° ${D.numero} correspondiente a nuestros servicios.\n\nQuedamos a su disposición para cualquier consulta.\n\nAtentamente,\nEl equipo de ${DB.Emisor.nombre}`;
         
         window.location.href = `mailto:${cliente.correo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
@@ -1691,7 +1707,6 @@
       const qrContainer = $('#qrcode-container');
       qrContainer.innerHTML = '';
       
-      // Reducir la información en el código QR para evitar el error
       const tot = calcularTotal(data);
       const qrData = `${tipo.slice(0, 3)}:${data.numero};T:${tot}`;
       
@@ -1702,14 +1717,11 @@
         if (qrCanvas) {
             doc.addImage(qrCanvas.toDataURL('image/png'), 'PNG', page.m, finalY, 70, 70);
         }
-      } catch (qrError) {
-        console.error("Error al generar QR:", qrError);
-      }
+      } catch (qrError) { console.error("Error al generar QR:", qrError); }
       
       let leftY = finalY + 80;
       if (data.notas) {
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(textColor); doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold'); doc.setTextColor(textColor); doc.setFontSize(10);
           doc.text('Notas:', page.m, leftY);
           leftY += 15;
           doc.setFont('helvetica', 'normal'); doc.setTextColor(mutedColor);
@@ -1750,16 +1762,11 @@
       }
     }
 
-
-    // ========================
-    // Utilidades
-    // ========================
     function fileToDataURL(file){
       return new Promise((res, rej) => { const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = rej; r.readAsDataURL(file); });
     }
     function currency(n){
-      const v = Number(n||0);
-      return v.toLocaleString('es-CO', { style:'currency', currency:'COP', maximumFractionDigits: 0 });
+      return (Number(n||0)).toLocaleString('es-CO', { style:'currency', currency:'COP', maximumFractionDigits: 0 });
     }
     function today(){ return new Date().toISOString().split('T')[0]; }
     
@@ -1777,42 +1784,39 @@
         const ivaVal = subConDesc * ((doc.iva || 0) / 100);
         return subConDesc + ivaVal;
     }
+    function navigateTo(pageId) {
+        $$('.page').forEach(p => p.classList.remove('active'));
+        $(`#page_${pageId}`).classList.add('active');
+        $$('.nav-link').forEach(l => l.classList.remove('active'));
+        $(`.nav-link[href="#${pageId}"]`).classList.add('active');
+    }
     
-    // ========================
-    // INICIALIZACIÓN
-    // ========================
     document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         setupForms();
 
         const loginButton = $('#login-button');
         const passwordInput = $('#login-password');
-        
-        async function intentarLogin() {
-            loginButton.disabled = true;
-            loginButton.textContent = 'Verificando...';
-            try {
-                await loadDB();
-                if (await checkPassword(passwordInput.value)) {
-                    $('#login-wall').style.display = 'none';
-                } else {
-                    $('#login-error').style.display = 'block';
-                    passwordInput.value = '';
-                }
-            } catch (error) {
-                console.error("Login failed:", error);
-                showToast('Error de conexión. Inténtalo de nuevo.', 'error');
-            } finally {
-                loginButton.disabled = false;
-                loginButton.textContent = 'Entrar';
-            }
-        }
+        const emailInput = $('#login-email');
+        const recoverButton = $('#recover-password-button');
+        const loginError = $('#login-error');
 
         loginButton.onclick = intentarLogin;
         passwordInput.onkeypress = (e) => { if (e.key === 'Enter') intentarLogin(); };
-        $('#logout-button').onclick = (e) => { e.preventDefault(); location.reload(); };
-    });
+        emailInput.onkeypress = (e) => { if (e.key === 'Enter') intentarLogin(); };
+        recoverButton.onclick = recuperarContrasena;
 
+        emailInput.oninput = () => loginError.style.display = 'none';
+        passwordInput.oninput = () => loginError.style.display = 'none';
+
+        $('#logout-button').onclick = async (e) => { 
+            e.preventDefault(); 
+            try {
+                await firebase.signOut(auth);
+                location.reload();
+            } catch (error) { console.error("Error al cerrar sesión:", error); }
+        };
+    });
   </script>
 </body>
 </html>
